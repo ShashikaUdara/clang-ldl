@@ -26,7 +26,8 @@ VENV_DIR    := $(ROOT)/.venv
 .PHONY: help all setup build native native-cmake native-make clean \
         install install-dev develop uninstall \
         test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar test-ocr-all build-packs \
-        example example-json languages languages-json \
+        example example-json example-full-circle test-example-full-circle \
+        languages languages-json \
         env print-env check-deps venv
 
 .DEFAULT_GOAL := help
@@ -39,8 +40,9 @@ help:
 	@echo ""
 	@echo "Quick start:"
 	@echo "  make setup          # build native lib + install Python package + verify"
-	@echo "  make example        # detect language from synthetic HELLO image"
-	@echo "  make languages      # list 21 supported languages"
+	@echo "  make example              # detect language from synthetic HELLO image"
+	@echo "  make example-full-circle  # image → OCR → language (all 21 scripts)"
+	@echo "  make languages            # list 21 supported languages"
 
 ## all: Build native library and install Python package
 all: build install
@@ -190,6 +192,14 @@ example: build
 ## example-json: Same as example but JSON output
 example-json: build
 	$(PYTHON) "$(EXAMPLES)/detect_language.py" --synthetic "HELLO" --json
+
+## example-full-circle: Demo image → OCR → language for all 21 native OCR languages
+example-full-circle: build
+	$(PYTHON) "$(EXAMPLES)/full_circle_detect.py" --all
+
+## test-example-full-circle: Assert full-circle pipeline (language + OCR text match)
+test-example-full-circle: build
+	$(PYTHON) "$(EXAMPLES)/full_circle_detect.py" --all --strict
 
 ## languages: Print supported language count and table
 languages:

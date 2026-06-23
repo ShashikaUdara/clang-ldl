@@ -683,6 +683,8 @@ make test-ocr-en      # Latin golden tests
 make test-ocr-ru      # Cyrillic golden tests
 make test-ocr-all     # full 21-language OCR gate
 make bench-ocr        # CER report per script
+make example-full-circle           # image → OCR → language demo
+make test-example-full-circle      # assert full pipeline (strict)
 ```
 
 ---
@@ -726,6 +728,7 @@ For a single engineer, implement in this order (highest ROI first):
 | 2026-06-23 | **Phase L3 complete.** Indic engine (`segment_indic.cpp`), ten script packs, v0.6.0, `make test-ocr-indic`, `ocr_native` for all South Asian scripts (20/21; Arabic next). |
 | 2026-06-23 | **Phase L4 complete.** Arabic engine (`segment_arabic.cpp`, ligature table), `arabic.clpk`, v0.7.0, `make test-ocr-ar`, full **21/21 native OCR**. |
 | 2026-06-23 | **Phase L5 complete.** Pack index + mmap, confidence calibration, mixed-script fallback, multi-font Cyrillic, `make test-ocr-all`, `cer_report.py`, v0.8.0. |
+| 2026-06-23 | **§17 Integrations** — Python usage guide, `examples/full_circle_detect.py`, `make example-full-circle`. |
 
 ---
 
@@ -743,5 +746,163 @@ For a single engineer, implement in this order (highest ROI first):
 ## 16. Next action
 
 **Post-roadmap:** optional ML track (clang.md Phase 2), mobile photo hardening, tashkeel second pass for Arabic.
+
+---
+
+## 17. Integrations — using clang-ldl from Python
+
+This section describes how to embed clang-ldl in a Python application: load an image, read the text with the native OCR core, and identify which of the 21 supported languages are present.
+
+> **Plain-language pitch:** You hand the library a picture of words. It turns pixels into letters (C++), then figures out which human language those letters belong to (Python). No cloud API, no training step — just `pip install` (or `make setup`) and a few lines of code.
+
+### 17.1 Prerequisites
+
+```bash
+cd clang-ldl
+make setup          # build libclang_ldl.so, install Python package, run verify
+```
+
+Development without pip:
+
+```bash
+make develop        # prints export PYTHONPATH=… CLANG_LDL_LIB=… CLANG_LDL_PACKS_DIR=…
+```
+
+The native shared library (`libclang_ldl.so`) and glyph packs (`packs/*.clpk`) must be on disk. The Python layer finds them automatically when run from a built tree, or via environment variables (see §17.5).
+
+### 17.2 Public API surface
+
+| Import | Role |
+|--------|------|
+| `ImageLanguageDetector` | End-to-end: image file or bytes → `DetectionResult` |
+| `LanguageAnalyzer` | Unicode text only → ranked `DetectedLanguage` list |
+| `language_coverage_summary()` | Counts: 21 script IDs, 21 native OCR |
+| `list_supported_languages()` | Metadata per ISO code (`ocr_native`, script, regions) |
+
+Result types (`DetectionResult`, `DetectedLanguage`) are plain dataclasses with `.to_dict()` for JSON logging.
+
+### 17.3 Full pipeline (image → language)
+
+```
+  ┌─────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+  │ Image file  │────▶│ C++ OCR core     │────▶│ Unicode text        │
+  │ PNG/PPM/…   │     │ binarize, segment│     │ + per-glyph scores  │
+  └─────────────┘     │ template match   │     └──────────┬──────────┘
+                      └──────────────────┘                │
+                                                            ▼
+                      ┌──────────────────┐     ┌─────────────────────┐
+                      │ Ranked languages │◀────│ LanguageAnalyzer    │
+                      │ en 94%, fr 6%    │     │ script + n-gram ID  │
+                      └──────────────────┘     └─────────────────────┘
+```
+
+**Minimal example — detect from an image file:**
+
+```python
+from clang_ldl import ImageLanguageDetector
+
+detector = ImageLanguageDetector()
+result = detector.detect_from_file("scan.png")
+
+print(result.text)                    # OCR output (UTF-8)
+print(result.languages[0].code)       # top language, e.g. "ru"
+print(result.mean_confidence)         # mean glyph confidence (0–1)
+print(result.identification_source)   # "ocr" | "unicode" | "hybrid"
+```
+
+**Synthetic test image (CI / unit tests):**
+
+```python
+from pathlib import Path
+from clang_ldl import ImageLanguageDetector
+from clang_ldl.test_image import render_synthetic_image
+
+text = "Привет"
+path, renderer = render_synthetic_image(text, Path("sample.png"))
+result = detector.detect_synthetic(text, path)   # hint text enables fallback
+```
+
+`detect_synthetic()` picks the correct glyph pack, renders with the same fonts as the OCR corpora, and runs the native pipeline end-to-end.
+
+**Unicode-only (no image):**
+
+```python
+from clang_ldl import LanguageAnalyzer
+
+langs = LanguageAnalyzer().detect("नमस्ते")
+print(langs[0].code)   # "hi"
+```
+
+### 17.4 CLI and Makefile examples
+
+| Command | What it does |
+|---------|----------------|
+| `make example` | Single English demo (`HELLO` → English) |
+| `make example-full-circle` | All 21 languages: render corpus sample → OCR → language ID |
+| `make test-example-full-circle` | Same, but asserts OCR text and language code |
+| `python examples/detect_language.py --synthetic "مرحبا"` | Ad-hoc one-off |
+| `python examples/full_circle_detect.py --lang ru --text "язык"` | Single-language full circle |
+
+Full-circle demo script: [`examples/full_circle_detect.py`](../examples/full_circle_detect.py)
+
+```bash
+make example-full-circle
+# or
+python examples/full_circle_detect.py --all --strict
+```
+
+### 17.5 Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `CLANG_LDL_LIB` | Path to `libclang_ldl.so` (set automatically by `make`) |
+| `CLANG_LDL_PACKS_DIR` | Directory containing `*.clpk` glyph packs |
+| `CLANG_LDL_PACK_ID` | Force a single pack (e.g. `cyrillic`); usually auto-routed |
+| `CLANG_LDL_MIXED_SCRIPT=0` | Disable per-glyph cross-pack retry (default: on) |
+| `CLANG_LDL_DESKEW=1` | Enable mild rotation correction before OCR |
+| `CLANG_LDL_RTL_REVERSE=1` | Reverse glyph order for RTL lines stored LTR in the image |
+
+### 17.6 Integration patterns
+
+**Batch folder of scans**
+
+```python
+from pathlib import Path
+from clang_ldl import ImageLanguageDetector
+
+detector = ImageLanguageDetector()
+for path in Path("inbox").glob("*.png"):
+    r = detector.detect_from_file(path)
+    top = r.languages[0] if r.languages else None
+    print(path.name, top.code if top else "?", r.text[:80])
+```
+
+**PIL / in-memory RGB**
+
+```python
+from PIL import Image
+from clang_ldl import ImageLanguageDetector
+
+img = Image.open("photo.jpg")
+result = ImageLanguageDetector().detect_from_pil_image(img)
+```
+
+**JSON API / microservice**
+
+```python
+result = detector.detect_from_file(upload_path)
+return result.to_dict()   # serializable: text, languages[], confidence, source
+```
+
+### 17.7 What to expect in production
+
+| Input | Typical behaviour |
+|-------|-------------------|
+| Synthetic render (same fonts as packs) | Near-perfect OCR; language ID matches script |
+| Clean scan, known font family | Good Tier B accuracy (see §12 metrics) |
+| Mixed-script line | `CLANG_LDL_MIXED_SCRIPT` retries low-confidence glyphs across packs |
+| Handwriting / decorative fonts | OCR may fail; language ID may still work if enough Unicode is recovered |
+
+For language-detection products, treat **OCR text + top language code + confidence** as the contract. Log `identification_source` to know whether the answer came from native OCR or Unicode analysis alone.
 
 ---
