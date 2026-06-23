@@ -118,7 +118,7 @@ const std::vector<std::string>& native_pack_ids() {
         "latin", "cyrillic", "greek", "armenian", "georgian",
         "hebrew", "thai", "lao", "myanmar", "ethiopic",
         "devanagari", "bengali", "gurmukhi", "gujarati", "odia",
-        "tamil", "telugu", "kannada", "malayalam", "sinhala"};
+        "tamil", "telugu", "kannada", "malayalam", "sinhala", "arabic"};
     return ids;
 }
 

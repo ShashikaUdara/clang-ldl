@@ -100,6 +100,8 @@ def ocr_pack_id_for_text(text: str) -> str | None:
             pack_votes["malayalam"] = pack_votes.get("malayalam", 0) + 1
         elif 0x0D80 <= cp <= 0x0DFF:
             pack_votes["sinhala"] = pack_votes.get("sinhala", 0) + 1
+        elif 0x0600 <= cp <= 0x06FF or 0x0750 <= cp <= 0x077F or 0x08A0 <= cp <= 0x08FF:
+            pack_votes["arabic"] = pack_votes.get("arabic", 0) + 1
         else:
             return None
     if not pack_votes:

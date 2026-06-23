@@ -55,7 +55,8 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
 
     try {
         const clang_ldl::Image binary = clang_ldl::preprocess(input);
-        const auto lines = clang_ldl::find_text_lines(binary);
+        auto lines = clang_ldl::find_text_lines(binary);
+        lines = clang_ldl::merge_adjacent_text_lines(lines, std::max(8, binary.height / 12));
         std::vector<clang_ldl::Glyph> all_glyphs;
 
         for (const auto& line_box : lines) {
@@ -134,7 +135,7 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
 extern "C" {
 
 const char* clang_ldl_version(void) {
-    return "0.6.0";
+    return "0.7.0";
 }
 
 int clang_ldl_extract_text(const char* image_path, ClangLdlResult* out) {

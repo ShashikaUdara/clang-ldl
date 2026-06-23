@@ -547,6 +547,10 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 **Exit criteria:** CER ≤ 10% on synthetic Arabic without tashkeel; tashkeel optional pass documented.
 
+**Status:** Complete (2026-06-23). `segment_arabic.cpp` (baseline + word-gap cursive clustering), `arabic_ligatures.cpp` (top bigram table + pack ligature prototypes), `arabic.clpk`, RTL rendering, v0.7.0, `make test-ocr-ar`, `ocr_native` for ar (**21/21 native OCR**).
+
+**Tashkeel:** vowel marks (U+064B–U+0652) are excluded from the golden corpus and pack; optional second-pass mark attachment is deferred to L5 hardening.
+
 ---
 
 ### Phase L5 — Hardening (weeks 36–40)
@@ -718,6 +722,7 @@ For a single engineer, implement in this order (highest ROI first):
 | 2026-06-23 | **Phase L1 complete.** Tier A packs (cyrillic, greek, armenian, georgian), script router voting, UTF-8 OCR (v0.4.0), `make test-ocr-tier-a`, `ocr_native` for ru/el/hy/ka. |
 | 2026-06-23 | **Phase L2 complete.** Tier B packs (hebrew, thai, lao, myanmar, ethiopic), RTL + mark attachment preprocess, v0.5.0, `make test-ocr-tier-b`, `ocr_native` for he/th/lo/my/am (10/21 native OCR). |
 | 2026-06-23 | **Phase L3 complete.** Indic engine (`segment_indic.cpp`), ten script packs, v0.6.0, `make test-ocr-indic`, `ocr_native` for all South Asian scripts (20/21; Arabic next). |
+| 2026-06-23 | **Phase L4 complete.** Arabic engine (`segment_arabic.cpp`, ligature table), `arabic.clpk`, v0.7.0, `make test-ocr-ar`, full **21/21 native OCR**. |
 
 ---
 
@@ -734,8 +739,8 @@ For a single engineer, implement in this order (highest ROI first):
 
 ## 16. Next action
 
-**Phase L4 — Arabic (RTL cursive segmentation + `arabic.clpk`):**
+**Phase L5 — Hardening (multi-font packs, `make test-ocr-all`, performance):**
 
-1. Implement `segment_arabic.cpp` (baseline, word gaps)
-2. Add `arabic.clpk` with contextual letter forms
-3. Extend `make test-ocr-ar` harness
+1. Multi-font tolerance (2–3 TTF families per script)
+2. Confidence calibration and mixed-script line routing
+3. CI gate: `ocr_native_count == 21` on every release

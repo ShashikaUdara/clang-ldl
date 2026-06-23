@@ -6,7 +6,7 @@
 namespace clang_ldl {
 
 bool pack_is_rtl(const std::string& pack_id) {
-    return pack_id == "hebrew";
+    return pack_id == "hebrew" || pack_id == "arabic";
 }
 
 void apply_rtl_glyph_order(std::vector<Glyph>& glyphs, const std::string& pack_id) {

@@ -49,7 +49,7 @@ def load_corpus(lang: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("lang", help="Language code (en, ru, el, hy, ka, he, th, lo, my, am, hi, bn, pa, gu, or, ta, te, kn, ml, si)")
+    parser.add_argument("lang", help="Language code (en, ru, …, si, ar)")
     parser.add_argument("--max-cer", type=float, default=0.05, help="Maximum allowed CER")
     args = parser.parse_args()
 

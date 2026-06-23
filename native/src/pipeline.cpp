@@ -109,6 +109,30 @@ std::vector<Rect> find_text_lines(const Image& binary) {
     return lines;
 }
 
+std::vector<Rect> merge_adjacent_text_lines(const std::vector<Rect>& lines, int max_gap) {
+    if (lines.size() < 2) {
+        return lines;
+    }
+    std::vector<Rect> merged;
+    Rect cur = lines.front();
+    for (size_t i = 1; i < lines.size(); ++i) {
+        const Rect& next = lines[i];
+        const int gap = next.y - (cur.y + cur.h);
+        if (gap <= max_gap) {
+            const int nx = std::min(cur.x, next.x);
+            const int ny = cur.y;
+            const int nmaxx = std::max(cur.x + cur.w, next.x + next.w);
+            const int nmaxy = std::max(cur.y + cur.h, next.y + next.h);
+            cur = {nx, ny, nmaxx - nx, nmaxy - ny};
+        } else {
+            merged.push_back(cur);
+            cur = next;
+        }
+    }
+    merged.push_back(cur);
+    return merged;
+}
+
 std::vector<Glyph> segment_glyphs(const Image& line_binary) {
     const int w = line_binary.width;
     const int h = line_binary.height;

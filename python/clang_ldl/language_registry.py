@@ -80,6 +80,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
             UnicodeRange(0xFE70, 0xFEFF),
         ),
         sample_char="ا",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="he",

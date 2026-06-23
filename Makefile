@@ -25,7 +25,7 @@ VENV_DIR    := $(ROOT)/.venv
 
 .PHONY: help all setup build native native-cmake native-make clean \
         install install-dev develop uninstall \
-        test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic build-packs \
+        test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar build-packs \
         example example-json languages languages-json \
         env print-env check-deps venv
 
@@ -133,8 +133,12 @@ test-text:
 [print(c + ': ' + a.detect(t)[0].name) for c, t in samples.items()]"
 
 ## verify: Build, list languages, and run tests
-verify: build languages test-smoke test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic
+verify: build languages test-smoke test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar
 	@echo "Verification passed."
+
+## test-ocr-ar: Arabic OCR corpus (target CER <= 10%, no tashkeel)
+test-ocr-ar: build
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" ar --max-cer 0.10
 
 ## test-ocr-indic: Indic script OCR corpora (target CER <= 8%)
 test-ocr-indic: build

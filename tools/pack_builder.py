@@ -270,6 +270,30 @@ PACK_SPECS: dict[str, dict] = {
         "w_struct": 0.15,
         "w_aspect": 0.10,
     },
+    "arabic": {
+        "kind": "ttf",
+        "font": "NotoSansArabic-Regular.ttf",
+        "codepoints": [cp for cp in range(0x0621, 0x064B) if cp not in (0x0625, 0x0649, 0x063D, 0x063E, 0x063F)],
+        "ligatures": [
+            (0xFEFB, "لا"),
+            (0xFEF5, "لآ"),
+            (0xFEF7, "لأ"),
+            (0xFEF9, "لإ"),
+            (0xFEDF, "لم"),
+            (0xFEE0, "له"),
+            (0xFEF0, "في"),
+            (0xFE91, "بي"),
+            (0xFEF3, "لى"),
+            (0xFEF2, "ئي"),
+        ],
+        "grid_w": 32,
+        "grid_h": 48,
+        "rtl": True,
+        "threshold": 0.13,
+        "w_ncc": 0.72,
+        "w_struct": 0.18,
+        "w_aspect": 0.10,
+    },
 }
 
 
@@ -317,16 +341,44 @@ def build_ttf_pack(
     grid_w: int,
     grid_h: int,
     rtl: bool = False,
+    ligatures: list[tuple[int, str]] | None = None,
 ) -> list[dict]:
     font_path = resolve_font(font_name)
     glyphs = []
     seen: set[int] = set()
+    seen_bitmaps: set[bytes] = set()
     for cp in codepoints:
         if cp in seen:
             continue
         seen.add(cp)
         bitmap = render_cell_glyph_bitmap(
             cp, font_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
+        )
+        if not any(bitmap):
+            continue
+        bmp_key = bytes(bitmap)
+        if bmp_key in seen_bitmaps:
+            continue
+        seen_bitmaps.add(bmp_key)
+        feats = compute_features(bitmap, grid_w, grid_h)
+        glyphs.append(
+            {
+                "codepoint": cp,
+                "bitmap": bitmap,
+                "holes": int(feats["holes"]),
+                "endpoints": int(feats["endpoints"]),
+                "junctions": int(feats["junctions"]),
+                "aspect": float(feats["aspect"]),
+            }
+        )
+    from ocr_render import render_cell_text_bitmap  # noqa: E402
+
+    for cp, text in ligatures or []:
+        if cp in seen:
+            continue
+        seen.add(cp)
+        bitmap = render_cell_text_bitmap(
+            text, font_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
         )
         if not any(bitmap):
             continue
@@ -356,6 +408,7 @@ def build_pack(pack_id: str) -> tuple[list[dict], int, int]:
         grid_w=grid_w,
         grid_h=grid_h,
         rtl=bool(spec.get("rtl", False)),
+        ligatures=spec.get("ligatures"),
     ), grid_w, grid_h
 
 
@@ -412,7 +465,7 @@ def main() -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Build every native OCR pack (Latin + Tier A + Tier B + Indic)",
+        help="Build every native OCR pack (all scripts including Arabic)",
     )
     parser.add_argument(
         "--output",

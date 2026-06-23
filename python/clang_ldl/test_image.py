@@ -200,6 +200,7 @@ OCR_NATIVE_FONTS: dict[str, tuple[str, bool]] = {
     "kn": ("NotoSansKannada-Regular.ttf", False),
     "ml": ("NotoSansMalayalam-Regular.ttf", False),
     "si": ("NotoSansSinhala-Regular.ttf", False),
+    "ar": ("NotoSansArabic-Regular.ttf", True),
 }
 
 
@@ -265,6 +266,7 @@ def render_synthetic_image(text: str, out_path: Path) -> tuple[Path, str]:
         "kannada": "kn",
         "malayalam": "ml",
         "sinhala": "si",
+        "arabic": "ar",
     }
     if pack_id in pack_to_lang:
         pack_lang = pack_to_lang[pack_id]

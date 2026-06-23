@@ -197,6 +197,32 @@ def render_cell_glyph_bitmap(
         return extract_first_glyph_bitmap(img_path, grid_w=grid_w, grid_h=grid_h)
 
 
+def render_cell_text_bitmap(
+    text: str,
+    font_path: Path | str,
+    *,
+    grid_w: int = GRID_W,
+    grid_h: int = GRID_H,
+    font_size: int = FONT_SIZE,
+    letter_spacing: int = LETTER_SPACING,
+    rtl: bool = False,
+) -> list[int]:
+    """Pack template for a multi-character cluster (e.g. Arabic ligatures)."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        img_path = Path(td) / "glyph.png"
+        render_ocr_png(
+            text,
+            img_path,
+            font_path,
+            font_size=font_size,
+            letter_spacing=letter_spacing,
+            rtl=rtl,
+        )
+        return extract_first_glyph_bitmap(img_path, grid_w=grid_w, grid_h=grid_h)
+
+
 def render_ocr_png(
     text: str,
     out_path: Path,
