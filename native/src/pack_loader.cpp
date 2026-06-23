@@ -1,5 +1,7 @@
 #include "clang_ldl/pack_loader.hpp"
 
+#include "clang_ldl/pack_index.hpp"
+
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
@@ -8,6 +10,13 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace clang_ldl {
 
@@ -36,18 +45,13 @@ float read_f32(const uint8_t*& p) {
 
 } // namespace
 
-GlyphPack load_pack_file(const std::string& path) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) {
-        throw std::runtime_error("failed to open pack: " + path);
+GlyphPack parse_pack_bytes(const uint8_t* data, size_t size) {
+    if (size < 10) {
+        throw std::runtime_error("pack too small");
     }
-    std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    if (data.size() < 10) {
-        throw std::runtime_error("pack too small: " + path);
-    }
-    const uint8_t* p = data.data();
+    const uint8_t* p = data;
     if (std::memcmp(p, "CLPK", 4) != 0) {
-        throw std::runtime_error("invalid pack magic: " + path);
+        throw std::runtime_error("invalid pack magic");
     }
     p += 4;
     const uint32_t version = read_u32(p);
@@ -55,8 +59,8 @@ GlyphPack load_pack_file(const std::string& path) {
         throw std::runtime_error("unsupported pack version: " + std::to_string(version));
     }
     const uint16_t id_len = read_u16(p);
-    if (p + id_len + 20 > data.data() + data.size()) {
-        throw std::runtime_error("truncated pack header: " + path);
+    if (p + id_len + 20 > data + size) {
+        throw std::runtime_error("truncated pack header");
     }
     GlyphPack pack;
     pack.id.assign(reinterpret_cast<const char*>(p), id_len);
@@ -70,25 +74,58 @@ GlyphPack load_pack_file(const std::string& path) {
     const uint32_t count = read_u32(p);
     pack.glyphs.reserve(count);
     for (uint32_t i = 0; i < count; ++i) {
-        if (p + 20 > data.data() + data.size()) {
-            throw std::runtime_error("truncated glyph header in pack: " + path);
+        if (p + 20 > data + size) {
+            throw std::runtime_error("truncated glyph header in pack");
         }
         GlyphPrototype g;
         g.codepoint = read_u32(p);
         g.holes = *p++;
         g.endpoints = *p++;
         g.junctions = *p++;
-        p += 1; // padding
+        p += 1;
         g.aspect = read_f32(p);
         const uint32_t bmp_len = read_u32(p);
-        if (p + bmp_len > data.data() + data.size()) {
-            throw std::runtime_error("truncated glyph bitmap in pack: " + path);
+        if (p + bmp_len > data + size) {
+            throw std::runtime_error("truncated glyph bitmap in pack");
         }
         g.bitmap.assign(p, p + bmp_len);
         p += bmp_len;
         pack.glyphs.push_back(std::move(g));
     }
+    build_glyph_index(pack);
     return pack;
+}
+
+GlyphPack load_pack_file(const std::string& path) {
+#if defined(__linux__) || defined(__APPLE__)
+    const int fd = ::open(path.c_str(), O_RDONLY);
+    if (fd >= 0) {
+        struct stat st {};
+        if (::fstat(fd, &st) == 0 && st.st_size > 0) {
+            void* mem = ::mmap(nullptr, static_cast<size_t>(st.st_size), PROT_READ, MAP_PRIVATE, fd, 0);
+            ::close(fd);
+            if (mem != MAP_FAILED) {
+                try {
+                    GlyphPack pack =
+                        parse_pack_bytes(static_cast<const uint8_t*>(mem), static_cast<size_t>(st.st_size));
+                    ::munmap(mem, static_cast<size_t>(st.st_size));
+                    return pack;
+                } catch (...) {
+                    ::munmap(mem, static_cast<size_t>(st.st_size));
+                    throw;
+                }
+            }
+        } else {
+            ::close(fd);
+        }
+    }
+#endif
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+        throw std::runtime_error("failed to open pack: " + path);
+    }
+    std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    return parse_pack_bytes(data.data(), data.size());
 }
 
 std::string default_packs_dir() {

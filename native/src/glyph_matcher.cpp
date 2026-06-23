@@ -1,11 +1,11 @@
 #include "clang_ldl/glyph_matcher.hpp"
 
+#include "clang_ldl/mixed_script.hpp"
 #include "clang_ldl/pack_loader.hpp"
 #include "clang_ldl/script_preprocess.hpp"
 #include "clang_ldl/script_router.hpp"
 #include "clang_ldl/segment_arabic.hpp"
 #include "clang_ldl/segment_indic.hpp"
-#include "clang_ldl/template_matcher.hpp"
 
 namespace clang_ldl {
 

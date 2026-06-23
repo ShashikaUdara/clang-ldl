@@ -8,6 +8,11 @@ from clang_ldl.language_registry import SUPPORTED_LANGUAGES
 def main() -> None:
     assert supported_language_count() == 21
 
+    from clang_ldl.language_registry import language_coverage_summary
+
+    summary = language_coverage_summary()
+    assert summary["ocr_native_count"] == 21, summary
+
     analyzer = LanguageAnalyzer()
     for lang in SUPPORTED_LANGUAGES:
         result = analyzer.detect(lang.sample_char)

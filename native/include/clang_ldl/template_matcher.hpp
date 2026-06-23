@@ -19,7 +19,4 @@ std::vector<uint8_t> normalize_glyph_bitmap(const Glyph& glyph, int grid_w, int 
 /** Match a normalized bitmap against a glyph pack. */
 MatchResult match_glyph(const std::vector<uint8_t>& normalized, const GlyphPack& pack);
 
-/** Recognize all glyphs using the given pack. */
-void recognize_glyphs_with_pack(std::vector<Glyph>& glyphs, const GlyphPack& pack);
-
 } // namespace clang_ldl

@@ -566,6 +566,8 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 **Exit criteria:** `ocr_native_count == 21`; `language_coverage_summary()` reports full OCR.
 
+**Status:** Complete (2026-06-23). Codepoint glyph index + mmap pack loading, per-pack confidence calibration, per-glyph mixed-script fallback (`CLANG_LDL_MIXED_SCRIPT=0` to disable), multi-font Cyrillic union prototypes, `make test-ocr-all` + `tools/cer_report.py`, v0.8.0.
+
 ---
 
 ## 7. Per-language checklist template
@@ -723,6 +725,7 @@ For a single engineer, implement in this order (highest ROI first):
 | 2026-06-23 | **Phase L2 complete.** Tier B packs (hebrew, thai, lao, myanmar, ethiopic), RTL + mark attachment preprocess, v0.5.0, `make test-ocr-tier-b`, `ocr_native` for he/th/lo/my/am (10/21 native OCR). |
 | 2026-06-23 | **Phase L3 complete.** Indic engine (`segment_indic.cpp`), ten script packs, v0.6.0, `make test-ocr-indic`, `ocr_native` for all South Asian scripts (20/21; Arabic next). |
 | 2026-06-23 | **Phase L4 complete.** Arabic engine (`segment_arabic.cpp`, ligature table), `arabic.clpk`, v0.7.0, `make test-ocr-ar`, full **21/21 native OCR**. |
+| 2026-06-23 | **Phase L5 complete.** Pack index + mmap, confidence calibration, mixed-script fallback, multi-font Cyrillic, `make test-ocr-all`, `cer_report.py`, v0.8.0. |
 
 ---
 
@@ -739,8 +742,6 @@ For a single engineer, implement in this order (highest ROI first):
 
 ## 16. Next action
 
-**Phase L5 — Hardening (multi-font packs, `make test-ocr-all`, performance):**
+**Post-roadmap:** optional ML track (clang.md Phase 2), mobile photo hardening, tashkeel second pass for Arabic.
 
-1. Multi-font tolerance (2–3 TTF families per script)
-2. Confidence calibration and mixed-script line routing
-3. CI gate: `ocr_native_count == 21` on every release
+---

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace clang_ldl {
@@ -24,6 +25,8 @@ struct GlyphPack {
     float w_struct = 0.25f;
     float w_aspect = 0.20f;
     std::vector<GlyphPrototype> glyphs;
+    /** Codepoint → glyph indices (multi-font / ligature prototype unions). */
+    std::unordered_map<uint32_t, std::vector<size_t>> glyph_by_codepoint;
 };
 
 /** Load a .clpk file from disk. Throws on error. */

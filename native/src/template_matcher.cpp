@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace clang_ldl {
 
@@ -41,6 +42,17 @@ float struct_similarity(const StructFeatures& a, const GlyphPrototype& b) {
 
 float aspect_penalty(float a, float b) {
     return std::max(0.f, 1.f - std::fabs(a - b));
+}
+
+float score_prototype(
+    const std::vector<uint8_t>& normalized,
+    const StructFeatures& feats,
+    const GlyphPack& pack,
+    const GlyphPrototype& proto) {
+    const float ncc = ncc_score(normalized, proto.bitmap);
+    const float st = struct_similarity(feats, proto);
+    const float asp = aspect_penalty(feats.aspect, proto.aspect);
+    return pack.w_ncc * ncc + pack.w_struct * st + pack.w_aspect * asp;
 }
 
 } // namespace
@@ -81,35 +93,45 @@ MatchResult match_glyph(const std::vector<uint8_t>& normalized, const GlyphPack&
         feats = compute_struct_features(normalized.data(), pack.grid_w, pack.grid_h);
     }
 
-    for (const auto& proto : pack.glyphs) {
-        const float ncc = ncc_score(normalized, proto.bitmap);
-        const float st = struct_similarity(feats, proto);
-        const float asp = aspect_penalty(feats.aspect, proto.aspect);
-        const float fused =
-            pack.w_ncc * ncc + pack.w_struct * st + pack.w_aspect * asp;
-        if (fused > best.confidence) {
-            best.confidence = fused;
-            best.codepoint = proto.codepoint;
-            best.ncc_score = ncc;
-            best.struct_score = st;
+    if (!pack.glyph_by_codepoint.empty()) {
+        for (const auto& entry : pack.glyph_by_codepoint) {
+            float codepoint_best = -1.f;
+            uint32_t cp = entry.first;
+            float best_ncc = 0.f;
+            float best_st = 0.f;
+            for (size_t idx : entry.second) {
+                const auto& proto = pack.glyphs[idx];
+                const float fused = score_prototype(normalized, feats, pack, proto);
+                if (fused > codepoint_best) {
+                    codepoint_best = fused;
+                    cp = proto.codepoint;
+                    best_ncc = ncc_score(normalized, proto.bitmap);
+                    best_st = struct_similarity(feats, proto);
+                }
+            }
+            if (codepoint_best > best.confidence) {
+                best.confidence = codepoint_best;
+                best.codepoint = cp;
+                best.ncc_score = best_ncc;
+                best.struct_score = best_st;
+            }
+        }
+    } else {
+        for (const auto& proto : pack.glyphs) {
+            const float fused = score_prototype(normalized, feats, pack, proto);
+            if (fused > best.confidence) {
+                best.confidence = fused;
+                best.codepoint = proto.codepoint;
+                best.ncc_score = ncc_score(normalized, proto.bitmap);
+                best.struct_score = struct_similarity(feats, proto);
+            }
         }
     }
+
     if (best.confidence < pack.threshold) {
         best.codepoint = '?';
     }
     return best;
-}
-
-void recognize_glyphs_with_pack(std::vector<Glyph>& glyphs, const GlyphPack& pack) {
-    for (auto& g : glyphs) {
-        const auto norm = normalize_glyph_bitmap(g, pack.grid_w, pack.grid_h);
-        const MatchResult m = match_glyph(norm, pack);
-        g.codepoint = m.codepoint;
-        g.confidence = m.confidence;
-        g.ncc_score = m.ncc_score;
-        g.struct_score = m.struct_score;
-        g.pack_id = m.pack_id;
-    }
 }
 
 } // namespace clang_ldl

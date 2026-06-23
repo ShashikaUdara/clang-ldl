@@ -25,7 +25,7 @@ VENV_DIR    := $(ROOT)/.venv
 
 .PHONY: help all setup build native native-cmake native-make clean \
         install install-dev develop uninstall \
-        test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar build-packs \
+        test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar test-ocr-all build-packs \
         example example-json languages languages-json \
         env print-env check-deps venv
 
@@ -133,8 +133,19 @@ test-text:
 [print(c + ': ' + a.detect(t)[0].name) for c, t in samples.items()]"
 
 ## verify: Build, list languages, and run tests
-verify: build languages test-smoke test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar
+verify: build languages test-smoke verify-ocr-coverage test-ocr-all
 	@echo "Verification passed."
+
+## verify-ocr-coverage: Assert ocr_native_count == 21
+verify-ocr-coverage:
+	$(PYTHON) "$(ROOT)/scripts/verify_ocr_coverage.py"
+
+## test-ocr-all: Full 21-language OCR gate (CI)
+test-ocr-all: build test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic test-ocr-ar
+
+## bench-ocr: CER summary report for all native OCR languages
+bench-ocr: build
+	$(PYTHON) "$(ROOT)/tools/cer_report.py"
 
 ## test-ocr-ar: Arabic OCR corpus (target CER <= 10%, no tashkeel)
 test-ocr-ar: build

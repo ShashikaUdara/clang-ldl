@@ -24,4 +24,4 @@ __all__ = [
     "supported_language_count",
 ]
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"

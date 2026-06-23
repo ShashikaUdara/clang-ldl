@@ -47,6 +47,7 @@ PACK_SPECS: dict[str, dict] = {
         "w_ncc": 0.85,
         "w_struct": 0.05,
         "w_aspect": 0.10,
+        "alt_fonts": ["DejaVuSans.ttf"],
     },
     "greek": {
         "kind": "ttf",
@@ -342,17 +343,40 @@ def build_ttf_pack(
     grid_h: int,
     rtl: bool = False,
     ligatures: list[tuple[int, str]] | None = None,
+    alt_fonts: list[str] | None = None,
 ) -> list[dict]:
-    font_path = resolve_font(font_name)
     glyphs = []
-    seen: set[int] = set()
     seen_bitmaps: set[bytes] = set()
-    for cp in codepoints:
-        if cp in seen:
-            continue
-        seen.add(cp)
-        bitmap = render_cell_glyph_bitmap(
-            cp, font_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
+    font_names = [font_name] + list(alt_fonts or [])
+    for fname in font_names:
+        font_path = resolve_font(fname)
+        for cp in codepoints:
+            bitmap = render_cell_glyph_bitmap(
+                cp, font_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
+            )
+            if not any(bitmap):
+                continue
+            bmp_key = bytes(bitmap)
+            if bmp_key in seen_bitmaps:
+                continue
+            seen_bitmaps.add(bmp_key)
+            feats = compute_features(bitmap, grid_w, grid_h)
+            glyphs.append(
+                {
+                    "codepoint": cp,
+                    "bitmap": bitmap,
+                    "holes": int(feats["holes"]),
+                    "endpoints": int(feats["endpoints"]),
+                    "junctions": int(feats["junctions"]),
+                    "aspect": float(feats["aspect"]),
+                }
+            )
+    from ocr_render import render_cell_text_bitmap  # noqa: E402
+
+    primary_path = resolve_font(font_name)
+    for cp, text in ligatures or []:
+        bitmap = render_cell_text_bitmap(
+            text, primary_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
         )
         if not any(bitmap):
             continue
@@ -360,28 +384,6 @@ def build_ttf_pack(
         if bmp_key in seen_bitmaps:
             continue
         seen_bitmaps.add(bmp_key)
-        feats = compute_features(bitmap, grid_w, grid_h)
-        glyphs.append(
-            {
-                "codepoint": cp,
-                "bitmap": bitmap,
-                "holes": int(feats["holes"]),
-                "endpoints": int(feats["endpoints"]),
-                "junctions": int(feats["junctions"]),
-                "aspect": float(feats["aspect"]),
-            }
-        )
-    from ocr_render import render_cell_text_bitmap  # noqa: E402
-
-    for cp, text in ligatures or []:
-        if cp in seen:
-            continue
-        seen.add(cp)
-        bitmap = render_cell_text_bitmap(
-            text, font_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
-        )
-        if not any(bitmap):
-            continue
         feats = compute_features(bitmap, grid_w, grid_h)
         glyphs.append(
             {
@@ -409,6 +411,7 @@ def build_pack(pack_id: str) -> tuple[list[dict], int, int]:
         grid_h=grid_h,
         rtl=bool(spec.get("rtl", False)),
         ligatures=spec.get("ligatures"),
+        alt_fonts=spec.get("alt_fonts"),
     ), grid_w, grid_h
 
 

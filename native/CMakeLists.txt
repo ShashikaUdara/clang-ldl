@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(clang_ldl_native VERSION 0.7.0 LANGUAGES CXX C)
+project(clang_ldl_native VERSION 0.8.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,6 +20,9 @@ add_library(clang_ldl SHARED
     src/segment_indic.cpp
     src/segment_arabic.cpp
     src/arabic_ligatures.cpp
+    src/pack_index.cpp
+    src/confidence_calibrate.cpp
+    src/mixed_script.cpp
 )
 
 target_include_directories(clang_ldl
