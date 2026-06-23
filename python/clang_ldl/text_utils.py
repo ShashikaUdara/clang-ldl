@@ -29,7 +29,7 @@ def is_ascii_ocr_text(text: str) -> bool:
 
 
 def uses_native_ocr(text: str) -> bool:
-    """True when text is covered by a loaded native OCR pack (Tier A/B + Latin)."""
+    """True when text is covered by a loaded native OCR pack (all tiers + Latin)."""
     from clang_ldl.language_registry import SUPPORTED_LANGUAGES
 
     if not text.strip():
@@ -51,7 +51,7 @@ def uses_native_ocr(text: str) -> bool:
 
 
 def ocr_pack_id_for_text(text: str) -> str | None:
-    """Map text to a native .clpk id when unambiguous (Tier A/B + Latin)."""
+    """Map text to a native .clpk id when unambiguous (all native tiers + Latin)."""
     if not text.strip():
         return None
     if is_ascii_ocr_text(text):
@@ -80,6 +80,26 @@ def ocr_pack_id_for_text(text: str) -> str | None:
             pack_votes["myanmar"] = pack_votes.get("myanmar", 0) + 1
         elif 0x1200 <= cp <= 0x137F or 0x1380 <= cp <= 0x139F or 0x2D80 <= cp <= 0x2DDF:
             pack_votes["ethiopic"] = pack_votes.get("ethiopic", 0) + 1
+        elif 0x0900 <= cp <= 0x097F:
+            pack_votes["devanagari"] = pack_votes.get("devanagari", 0) + 1
+        elif 0x0980 <= cp <= 0x09FF:
+            pack_votes["bengali"] = pack_votes.get("bengali", 0) + 1
+        elif 0x0A00 <= cp <= 0x0A7F:
+            pack_votes["gurmukhi"] = pack_votes.get("gurmukhi", 0) + 1
+        elif 0x0A80 <= cp <= 0x0AFF:
+            pack_votes["gujarati"] = pack_votes.get("gujarati", 0) + 1
+        elif 0x0B00 <= cp <= 0x0B7F:
+            pack_votes["odia"] = pack_votes.get("odia", 0) + 1
+        elif 0x0B80 <= cp <= 0x0BFF:
+            pack_votes["tamil"] = pack_votes.get("tamil", 0) + 1
+        elif 0x0C00 <= cp <= 0x0C7F:
+            pack_votes["telugu"] = pack_votes.get("telugu", 0) + 1
+        elif 0x0C80 <= cp <= 0x0CFF:
+            pack_votes["kannada"] = pack_votes.get("kannada", 0) + 1
+        elif 0x0D00 <= cp <= 0x0D7F:
+            pack_votes["malayalam"] = pack_votes.get("malayalam", 0) + 1
+        elif 0x0D80 <= cp <= 0x0DFF:
+            pack_votes["sinhala"] = pack_votes.get("sinhala", 0) + 1
         else:
             return None
     if not pack_votes:

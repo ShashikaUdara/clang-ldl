@@ -140,6 +140,136 @@ PACK_SPECS: dict[str, dict] = {
         "w_struct": 0.10,
         "w_aspect": 0.10,
     },
+    "devanagari": {
+        "kind": "ttf",
+        "font": "NotoSansDevanagari-Regular.ttf",
+        "codepoints": list(range(0x0905, 0x0915))
+        + list(range(0x0915, 0x093A))
+        + list(range(0x093E, 0x094D)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "bengali": {
+        "kind": "ttf",
+        "font": "NotoSansBengali-Regular.ttf",
+        "codepoints": list(range(0x0985, 0x0995))
+        + list(range(0x0995, 0x09BA))
+        + list(range(0x09BE, 0x09CD)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "gurmukhi": {
+        "kind": "ttf",
+        "font": "NotoSansGurmukhi-Regular.ttf",
+        "codepoints": list(range(0x0A05, 0x0A15))
+        + list(range(0x0A15, 0x0A3A))
+        + list(range(0x0A3E, 0x0A4D)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "gujarati": {
+        "kind": "ttf",
+        "font": "NotoSansGujarati-Regular.ttf",
+        "codepoints": list(range(0x0A85, 0x0A95))
+        + list(range(0x0A95, 0x0AB9))
+        + list(range(0x0ABE, 0x0ACD)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "odia": {
+        "kind": "ttf",
+        "font": "NotoSansOriya-Regular.ttf",
+        "codepoints": list(range(0x0B05, 0x0B15))
+        + list(range(0x0B15, 0x0B3A))
+        + list(range(0x0B3E, 0x0B4D)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "tamil": {
+        "kind": "ttf",
+        "font": "NotoSansTamil-Regular.ttf",
+        "codepoints": list(range(0x0B85, 0x0B95))
+        + list(range(0x0B95, 0x0BB8))
+        + list(range(0x0BBE, 0x0BCD)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "telugu": {
+        "kind": "ttf",
+        "font": "NotoSansTelugu-Regular.ttf",
+        "codepoints": list(range(0x0C05, 0x0C15))
+        + list(range(0x0C15, 0x0C3A))
+        + list(range(0x0C3E, 0x0C4D)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "kannada": {
+        "kind": "ttf",
+        "font": "NotoSansKannada-Regular.ttf",
+        "codepoints": list(range(0x0C85, 0x0C95))
+        + list(range(0x0C95, 0x0CB9))
+        + list(range(0x0CBE, 0x0CCD)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "malayalam": {
+        "kind": "ttf",
+        "font": "NotoSansMalayalam-Regular.ttf",
+        "codepoints": list(range(0x0D05, 0x0D15))
+        + list(range(0x0D15, 0x0D3A))
+        + list(range(0x0D3E, 0x0D4D)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
+    "sinhala": {
+        "kind": "ttf",
+        "font": "NotoSansSinhala-Regular.ttf",
+        "codepoints": list(range(0x0D85, 0x0D97))
+        + list(range(0x0D9A, 0x0DC7))
+        + list(range(0x0DCF, 0x0DDF)),
+        "grid_w": 32,
+        "grid_h": 48,
+        "threshold": 0.14,
+        "w_ncc": 0.75,
+        "w_struct": 0.15,
+        "w_aspect": 0.10,
+    },
 }
 
 
@@ -282,7 +412,7 @@ def main() -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Build every native OCR pack (Latin + Tier A + Tier B)",
+        help="Build every native OCR pack (Latin + Tier A + Tier B + Indic)",
     )
     parser.add_argument(
         "--output",

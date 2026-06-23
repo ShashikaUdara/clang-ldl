@@ -130,6 +130,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India",),
         unicode_ranges=(UnicodeRange(0x0900, 0x097F),),
         sample_char="ह",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="bn",
@@ -138,6 +139,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("Bangladesh", "India (West Bengal)"),
         unicode_ranges=(UnicodeRange(0x0980, 0x09FF),),
         sample_char="ব",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="pa",
@@ -146,6 +148,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Punjab)",),
         unicode_ranges=(UnicodeRange(0x0A00, 0x0A7F),),
         sample_char="ਪ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="gu",
@@ -154,6 +157,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Gujarat)",),
         unicode_ranges=(UnicodeRange(0x0A80, 0x0AFF),),
         sample_char="ગ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="or",
@@ -162,6 +166,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Odisha)",),
         unicode_ranges=(UnicodeRange(0x0B00, 0x0B7F),),
         sample_char="ଓ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="ta",
@@ -170,6 +175,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Tamil Nadu)", "Sri Lanka", "Singapore"),
         unicode_ranges=(UnicodeRange(0x0B80, 0x0BFF),),
         sample_char="த",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="te",
@@ -178,6 +184,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Andhra Pradesh)", "India (Telangana)"),
         unicode_ranges=(UnicodeRange(0x0C00, 0x0C7F),),
         sample_char="త",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="kn",
@@ -186,6 +193,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Karnataka)",),
         unicode_ranges=(UnicodeRange(0x0C80, 0x0CFF),),
         sample_char="ಕ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="ml",
@@ -194,6 +202,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("India (Kerala)",),
         unicode_ranges=(UnicodeRange(0x0D00, 0x0D7F),),
         sample_char="മ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="si",
@@ -202,6 +211,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("Sri Lanka",),
         unicode_ranges=(UnicodeRange(0x0D80, 0x0DFF),),
         sample_char="ස",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="th",

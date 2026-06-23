@@ -179,7 +179,7 @@ def render_unicode_png(text: str, out_path: Path, font_size: int = 48, margin: i
     return out_path
 
 
-# Tier A/B native OCR — fixed-width line rendering (must match pack_builder fonts).
+# Native OCR — fixed-width line rendering (must match pack_builder fonts).
 OCR_NATIVE_FONTS: dict[str, tuple[str, bool]] = {
     "ru": ("NotoSans-Regular.ttf", False),
     "el": ("NotoSans-Regular.ttf", False),
@@ -190,6 +190,16 @@ OCR_NATIVE_FONTS: dict[str, tuple[str, bool]] = {
     "lo": ("NotoSansLao-Regular.ttf", False),
     "my": ("NotoSansMyanmar-Regular.ttf", False),
     "am": ("NotoSansEthiopic-Regular.ttf", False),
+    "hi": ("NotoSansDevanagari-Regular.ttf", False),
+    "bn": ("NotoSansBengali-Regular.ttf", False),
+    "pa": ("NotoSansGurmukhi-Regular.ttf", False),
+    "gu": ("NotoSansGujarati-Regular.ttf", False),
+    "or": ("NotoSansOriya-Regular.ttf", False),
+    "ta": ("NotoSansTamil-Regular.ttf", False),
+    "te": ("NotoSansTelugu-Regular.ttf", False),
+    "kn": ("NotoSansKannada-Regular.ttf", False),
+    "ml": ("NotoSansMalayalam-Regular.ttf", False),
+    "si": ("NotoSansSinhala-Regular.ttf", False),
 }
 
 
@@ -245,6 +255,16 @@ def render_synthetic_image(text: str, out_path: Path) -> tuple[Path, str]:
         "lao": "lo",
         "myanmar": "my",
         "ethiopic": "am",
+        "devanagari": "hi",
+        "bengali": "bn",
+        "gurmukhi": "pa",
+        "gujarati": "gu",
+        "odia": "or",
+        "tamil": "ta",
+        "telugu": "te",
+        "kannada": "kn",
+        "malayalam": "ml",
+        "sinhala": "si",
     }
     if pack_id in pack_to_lang:
         pack_lang = pack_to_lang[pack_id]

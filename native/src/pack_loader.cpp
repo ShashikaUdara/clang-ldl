@@ -116,7 +116,16 @@ const std::vector<std::string>& tier_a_pack_ids() {
 const std::vector<std::string>& native_pack_ids() {
     static const std::vector<std::string> ids = {
         "latin", "cyrillic", "greek", "armenian", "georgian",
-        "hebrew", "thai", "lao", "myanmar", "ethiopic"};
+        "hebrew", "thai", "lao", "myanmar", "ethiopic",
+        "devanagari", "bengali", "gurmukhi", "gujarati", "odia",
+        "tamil", "telugu", "kannada", "malayalam", "sinhala"};
+    return ids;
+}
+
+const std::vector<std::string>& indic_pack_ids() {
+    static const std::vector<std::string> ids = {
+        "devanagari", "bengali", "gurmukhi", "gujarati", "odia",
+        "tamil", "telugu", "kannada", "malayalam", "sinhala"};
     return ids;
 }
 

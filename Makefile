@@ -25,7 +25,7 @@ VENV_DIR    := $(ROOT)/.venv
 
 .PHONY: help all setup build native native-cmake native-make clean \
         install install-dev develop uninstall \
-        test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b build-packs \
+        test test-all test-text verify test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic build-packs \
         example example-json languages languages-json \
         env print-env check-deps venv
 
@@ -59,7 +59,7 @@ setup: build install verify
 ## build: Build the C/C++ shared library (alias: native)
 build: build-packs native
 
-## build-packs: Generate .clpk glyph template packs (Latin + Tier A + Tier B)
+## build-packs: Generate .clpk glyph template packs (all native OCR scripts)
 build-packs:
 	$(PYTHON) "$(ROOT)/tools/pack_builder.py" --all
 
@@ -133,8 +133,21 @@ test-text:
 [print(c + ': ' + a.detect(t)[0].name) for c, t in samples.items()]"
 
 ## verify: Build, list languages, and run tests
-verify: build languages test-smoke test-ocr-en test-ocr-tier-a test-ocr-tier-b
+verify: build languages test-smoke test-ocr-en test-ocr-tier-a test-ocr-tier-b test-ocr-indic
 	@echo "Verification passed."
+
+## test-ocr-indic: Indic script OCR corpora (target CER <= 8%)
+test-ocr-indic: build
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" hi --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" bn --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" pa --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" gu --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" or --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" ta --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" te --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" kn --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" ml --max-cer 0.08
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" si --max-cer 0.08
 
 ## test-ocr-tier-b: Tier B script OCR corpora (target CER <= 5%)
 test-ocr-tier-b: build

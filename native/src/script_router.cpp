@@ -2,6 +2,7 @@
 
 #include "clang_ldl/pack_loader.hpp"
 #include "clang_ldl/pipeline.hpp"
+#include "clang_ldl/segment_indic.hpp"
 #include "clang_ldl/template_matcher.hpp"
 
 #include <algorithm>
@@ -28,7 +29,10 @@ std::string route_script_for_line(const Image& line_binary) {
     if (!hint.empty()) {
         return hint;
     }
-    auto glyphs = segment_glyphs(line_binary);
+    auto glyphs = segment_indic_glyphs(line_binary);
+    if (glyphs.empty()) {
+        glyphs = segment_glyphs(line_binary);
+    }
     if (glyphs.empty()) {
         return "latin";
     }

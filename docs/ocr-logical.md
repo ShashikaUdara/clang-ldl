@@ -532,6 +532,8 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 **Exit criteria:** CER ≤ 8% on synthetic Indic (conjunct-heavy strings harder); matra-only errors counted separately.
 
+**Status:** Complete (2026-06-23). Shared `segment_indic.cpp` (shirorekha + akshara clustering + conjunct split), ten Indic packs (`devanagari` … `sinhala`), v0.6.0, `make test-ocr-indic`, `ocr_native` for hi/bn/pa/gu/or/ta/te/kn/ml/si (20/21 native OCR; Arabic remains L4).
+
 ---
 
 ### Phase L4 — Arabic (weeks 28–35)
@@ -715,6 +717,7 @@ For a single engineer, implement in this order (highest ROI first):
 | 2026-06-23 | **Phase L0 complete.** `.clpk` v1, `pack_builder.py`, `latin.clpk`, pack loader, struct features, script router stub, diagnostics C API (v0.3.0), `make test-ocr-en` at 0% CER. |
 | 2026-06-23 | **Phase L1 complete.** Tier A packs (cyrillic, greek, armenian, georgian), script router voting, UTF-8 OCR (v0.4.0), `make test-ocr-tier-a`, `ocr_native` for ru/el/hy/ka. |
 | 2026-06-23 | **Phase L2 complete.** Tier B packs (hebrew, thai, lao, myanmar, ethiopic), RTL + mark attachment preprocess, v0.5.0, `make test-ocr-tier-b`, `ocr_native` for he/th/lo/my/am (10/21 native OCR). |
+| 2026-06-23 | **Phase L3 complete.** Indic engine (`segment_indic.cpp`), ten script packs, v0.6.0, `make test-ocr-indic`, `ocr_native` for all South Asian scripts (20/21; Arabic next). |
 
 ---
 
@@ -731,8 +734,8 @@ For a single engineer, implement in this order (highest ROI first):
 
 ## 16. Next action
 
-**Phase L3 — Indic engine (Devanagari segmentation + hi pack):**
+**Phase L4 — Arabic (RTL cursive segmentation + `arabic.clpk`):**
 
-1. Implement `segment_indic.cpp` (shirorekha, akshara clustering)
-2. Add `devanagari.clpk` and Hindi OCR corpus
-3. Extend `make test-ocr-indic` harness
+1. Implement `segment_arabic.cpp` (baseline, word gaps)
+2. Add `arabic.clpk` with contextual letter forms
+3. Extend `make test-ocr-ar` harness
