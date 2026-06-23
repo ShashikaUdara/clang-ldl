@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define CLANG_LDL_OK 0
 #define CLANG_LDL_ERR_LOAD -1
@@ -13,11 +14,25 @@ extern "C" {
 #define CLANG_LDL_ERR_ALLOC -3
 #define CLANG_LDL_ERR_NULL -4
 
+typedef struct ClangLdlGlyphInfo {
+    uint32_t codepoint;
+    float confidence;
+    int x;
+    int y;
+    int w;
+    int h;
+    float ncc_score;
+    float struct_score;
+    char pack_id[32];
+} ClangLdlGlyphInfo;
+
 typedef struct ClangLdlResult {
     char* text;
     size_t text_len;
     float mean_confidence;
     int glyph_count;
+    ClangLdlGlyphInfo* glyphs;
+    int glyph_info_count;
 } ClangLdlResult;
 
 /** Extract Unicode text from an image file path. Caller must free with clang_ldl_free_result. */

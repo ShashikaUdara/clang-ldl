@@ -42,7 +42,10 @@ make example
 | Target | Description |
 |--------|-------------|
 | `make setup` | Build + install + verify (recommended first run) |
-| `make build` | Compile C/C++ shared library |
+| `make build` | Compile C/C++ shared library + glyph packs |
+| `make build-packs` | Regenerate `packs/latin.clpk` from 5×7 font |
+| `make test-ocr-en` | English OCR golden corpus (0% CER target) |
+| `make verify` | Build, languages, smoke + OCR tests |
 | `make clean` | Remove build artifacts and caches |
 | `make install-dev` | Editable Python install with pytest |
 | `make test` | Run `tests/` |
@@ -54,7 +57,8 @@ Legacy script (still works): `./scripts/build_native.sh`
 
 ## Architecture
 
-- **native/** — C++ computer vision (load, binarize, segment, template-match Latin glyphs)
+- **native/** — C++ computer vision (load, binarize, segment, `.clpk` template matching)
+- **packs/** — binary glyph template packs (Latin: `latin.clpk`)
 - **python/clang_ldl/** — ctypes bindings + Unicode script → language analysis
 - **examples/** — CLI test program
 - **docs/clang.md** — feature list, phases, ETAs, progress
@@ -63,6 +67,8 @@ Legacy script (still works): `./scripts/build_native.sh`
 ## Environment
 
 - `CLANG_LDL_LIB` — optional path to `libclang_ldl.so` if not in `native/build/`
+- `CLANG_LDL_PACKS_DIR` — directory containing `.clpk` glyph packs (default: `packs/`)
+- `CLANG_LDL_DESKEW=1` — enable experimental deskew in preprocessing (off by default)
 
 ## Phase 1 limitations
 

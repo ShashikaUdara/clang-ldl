@@ -12,6 +12,20 @@
 
 namespace {
 
+void fill_glyph_info(ClangLdlGlyphInfo& info, const clang_ldl::Glyph& g) {
+    info.codepoint = g.codepoint;
+    info.confidence = g.confidence;
+    info.x = g.box.x;
+    info.y = g.box.y;
+    info.w = g.box.w;
+    info.h = g.box.h;
+    info.ncc_score = g.ncc_score;
+    info.struct_score = g.struct_score;
+    std::memset(info.pack_id, 0, sizeof(info.pack_id));
+    const std::string& pid = g.pack_id.empty() ? "latin" : g.pack_id;
+    std::strncpy(info.pack_id, pid.c_str(), sizeof(info.pack_id) - 1);
+}
+
 int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
     if (!out) {
         return CLANG_LDL_ERR_NULL;
@@ -24,7 +38,7 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
         std::vector<clang_ldl::Glyph> all_glyphs;
 
         for (const auto& line_box : lines) {
-            clang_ldl::Image line = clang_ldl::Image();
+            clang_ldl::Image line;
             line.width = line_box.w;
             line.height = line_box.h;
             line.channels = 1;
@@ -35,15 +49,15 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
                 }
             }
             auto glyphs = clang_ldl::segment_glyphs(line);
+            clang_ldl::recognize_glyphs(glyphs, line);
             all_glyphs.insert(all_glyphs.end(), glyphs.begin(), glyphs.end());
         }
 
         if (all_glyphs.empty()) {
             auto glyphs = clang_ldl::segment_glyphs(binary);
+            clang_ldl::recognize_glyphs(glyphs, binary);
             all_glyphs = std::move(glyphs);
         }
-
-        clang_ldl::recognize_glyphs(all_glyphs);
 
         std::ostringstream text;
         float conf_sum = 0.f;
@@ -74,6 +88,20 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
         std::memcpy(out->text, s.c_str(), s.size() + 1);
         out->glyph_count = conf_n;
         out->mean_confidence = conf_n > 0 ? conf_sum / conf_n : 0.f;
+
+        out->glyph_info_count = static_cast<int>(all_glyphs.size());
+        if (!all_glyphs.empty()) {
+            out->glyphs = static_cast<ClangLdlGlyphInfo*>(
+                std::malloc(sizeof(ClangLdlGlyphInfo) * all_glyphs.size()));
+            if (!out->glyphs) {
+                std::free(out->text);
+                out->text = nullptr;
+                return CLANG_LDL_ERR_ALLOC;
+            }
+            for (size_t i = 0; i < all_glyphs.size(); ++i) {
+                fill_glyph_info(out->glyphs[i], all_glyphs[i]);
+            }
+        }
         return CLANG_LDL_OK;
     } catch (...) {
         return CLANG_LDL_ERR_PROCESS;
@@ -85,7 +113,7 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
 extern "C" {
 
 const char* clang_ldl_version(void) {
-    return "0.1.0";
+    return "0.3.0";
 }
 
 int clang_ldl_extract_text(const char* image_path, ClangLdlResult* out) {
@@ -122,9 +150,12 @@ void clang_ldl_free_result(ClangLdlResult* result) {
         return;
     }
     std::free(result->text);
+    std::free(result->glyphs);
     result->text = nullptr;
+    result->glyphs = nullptr;
     result->text_len = 0;
     result->glyph_count = 0;
+    result->glyph_info_count = 0;
     result->mean_confidence = 0.f;
 }
 

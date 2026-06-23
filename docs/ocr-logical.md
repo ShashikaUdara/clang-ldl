@@ -461,9 +461,11 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 **Exit criteria:**
 
-- [ ] `make test-ocr-en` passes (CER = 0% on synthetic Latin corpus)
-- [ ] Pack rebuild is reproducible from TTF + registry
-- [ ] `ocr_native_count` in Python registry updatable per language
+- [x] `make test-ocr-en` passes (CER = 0% on synthetic Latin corpus)
+- [x] Pack rebuild is reproducible from TTF + registry (`make build-packs`)
+- [x] `ocr_native_count` in Python registry updatable per language (`ocr_native` flag on `LanguageSpec`)
+
+**Status:** Complete (2026-06-23). Latin OCR runs from `packs/latin.clpk` with struct-feature fusion, projection segmentation for monospace synthetic text, Sauvola fallback binarization, and optional deskew via `CLANG_LDL_DESKEW=1`.
 
 ---
 
@@ -703,6 +705,7 @@ For a single engineer, implement in this order (highest ROI first):
 |------|--------|
 | 2026-06-23 | Initial logical OCR roadmap created. English Latin OCR operational. 20 scripts pending pack + segmentation work. |
 | 2026-06-23 | Added §2 Feasibility analysis — accuracy tiers, per-script feasibility scores, logical vs ML comparison, go/no-go recommendation. |
+| 2026-06-23 | **Phase L0 complete.** `.clpk` v1, `pack_builder.py`, `latin.clpk`, pack loader, struct features, script router stub, diagnostics C API (v0.3.0), `make test-ocr-en` at 0% CER. |
 
 ---
 
@@ -719,11 +722,10 @@ For a single engineer, implement in this order (highest ROI first):
 
 ## 16. Next action
 
-Start **Phase L0**:
+**Phase L1 — Cyrillic (Russian):**
 
-1. Create `tools/pack_builder.py`
-2. Define `.clpk` binary format v1
-3. Migrate Latin from embedded `FONT5x7` to `packs/latin.clpk`
-4. Add `make build-packs` and `make test-ocr-en`
-
-When L0 exits, begin `cyrillic.clpk` (Russian) as first non-Latin OCR target.
+1. Add Cyrillic codepoints to `pack_builder.py` config
+2. Build `packs/cyrillic.clpk` from Noto Sans Cyrillic
+3. Extend `script_router.cpp` to route Cyrillic blocks
+4. Add `tests/ocr/ru/corpus.txt` and `make test-ocr-ru`
+5. Set `ocr_native=True` for `ru` in `language_registry.py`

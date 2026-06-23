@@ -4,7 +4,7 @@
 
 namespace clang_ldl {
 
-/** Match segmented glyph bitmaps to Unicode code points via normalized templates. */
-void recognize_glyphs(std::vector<Glyph>& glyphs);
+/** Match segmented glyph bitmaps to Unicode code points via template packs. */
+void recognize_glyphs(std::vector<Glyph>& glyphs, const Image& line_binary = Image{});
 
 } // namespace clang_ldl

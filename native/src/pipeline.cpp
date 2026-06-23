@@ -1,26 +1,57 @@
 #include "clang_ldl/pipeline.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 #include <queue>
 #include <vector>
 
 namespace clang_ldl {
 
-Image preprocess(const Image& input) {
-    Image gray = input.channels == 1 ? input : input.to_grayscale();
-    Image blurred = gray.gaussian_blur(1);
-    Image binary = blurred.otsu_threshold();
+namespace {
+
+bool poor_binarization(const Image& binary) {
+    int ink = 0;
+    for (uint8_t v : binary.pixels) {
+        if (v > 127) {
+            ++ink;
+        }
+    }
+    const double ratio = static_cast<double>(ink) / static_cast<double>(binary.pixels.size());
+    return ratio < 0.001 || ratio > 0.5;
+}
+
+Image ensure_ink_foreground(Image binary) {
     int64_t sum = 0;
     for (uint8_t v : binary.pixels) {
         sum += v;
     }
     const double mean = static_cast<double>(sum) / static_cast<double>(binary.pixels.size());
-    // Light backgrounds produce dark text after Otsu; ensure ink = 255 for downstream CV.
     if (mean > 127.0) {
         binary = binary.invert();
     }
     return binary;
+}
+
+} // namespace
+
+Image preprocess(const Image& input) {
+    Image gray = input.channels == 1 ? input : input.to_grayscale();
+    Image blurred = gray.gaussian_blur(1);
+    Image deskewed = blurred;
+    if (const char* env = std::getenv("CLANG_LDL_DESKEW")) {
+        if (env[0] == '1' || env[0] == 'y' || env[0] == 'Y') {
+            deskewed = blurred.deskew(15.f);
+            if (deskewed.width <= 0 || deskewed.height <= 0) {
+                deskewed = blurred;
+            }
+        }
+    }
+    Image binary = deskewed.otsu_threshold();
+    if (poor_binarization(binary)) {
+        binary = deskewed.sauvola_threshold();
+    }
+    return ensure_ink_foreground(binary);
 }
 
 std::vector<Rect> find_text_lines(const Image& binary) {
@@ -72,6 +103,79 @@ std::vector<Rect> find_text_lines(const Image& binary) {
 std::vector<Glyph> segment_glyphs(const Image& line_binary) {
     const int w = line_binary.width;
     const int h = line_binary.height;
+    if (w <= 0 || h <= 0) {
+        return {};
+    }
+
+    // Monospace terminal font: split on all-empty columns (reliable for synthetic L0 corpus).
+    std::vector<int> col_sum(w, 0);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            if (line_binary.at(x, y) > 127) {
+                ++col_sum[x];
+            }
+        }
+    }
+
+    struct Span {
+        int x0;
+        int x1;
+    };
+    std::vector<Span> spans;
+    int x = 0;
+    while (x < w) {
+        while (x < w && col_sum[x] == 0) {
+            ++x;
+        }
+        if (x >= w) {
+            break;
+        }
+        const int x0 = x;
+        while (x < w && col_sum[x] > 0) {
+            ++x;
+        }
+        if (x - x0 >= 2) {
+            spans.push_back({x0, x});
+        }
+    }
+
+    if (!spans.empty()) {
+        int line_miny = h;
+        int line_maxy = 0;
+        for (int yy = 0; yy < h; ++yy) {
+            for (int xx = 0; xx < w; ++xx) {
+                if (line_binary.at(xx, yy) > 127) {
+                    line_miny = std::min(line_miny, yy);
+                    line_maxy = std::max(line_maxy, yy);
+                }
+            }
+        }
+        if (line_maxy < line_miny) {
+            return {};
+        }
+        const int line_h = line_maxy - line_miny + 1;
+
+        std::vector<Glyph> projected;
+        projected.reserve(spans.size());
+        for (const auto& span : spans) {
+            const int gw = span.x1 - span.x0;
+            Glyph g;
+            g.box = {span.x0, line_miny, gw, line_h};
+            g.bitmap.resize(static_cast<size_t>(gw) * line_h);
+            for (int yy = 0; yy < line_h; ++yy) {
+                for (int xx = 0; xx < gw; ++xx) {
+                    g.bitmap[static_cast<size_t>(yy) * gw + xx] =
+                        line_binary.at(span.x0 + xx, line_miny + yy) > 127 ? 255 : 0;
+                }
+            }
+            projected.push_back(std::move(g));
+        }
+        if (!projected.empty()) {
+            return projected;
+        }
+    }
+
+    // Fallback: connected components + merge (natural images / non-monospace).
     std::vector<int> labels(static_cast<size_t>(w) * h, -1);
     int next_label = 0;
     const int dx[4] = {1, -1, 0, 0};
@@ -168,39 +272,67 @@ std::vector<Glyph> segment_glyphs(const Image& line_binary) {
         return glyphs;
     }
 
-    std::vector<Glyph> merged;
-    merged.push_back(glyphs.front());
-    for (size_t i = 1; i < glyphs.size(); ++i) {
-        Glyph& prev = merged.back();
-        const Glyph& cur = glyphs[i];
-        const int gap = cur.box.x - (prev.box.x + prev.box.w);
-        const int avg_h = (prev.box.h + cur.box.h) / 2;
-        // Merge only touching or overlapping parts of the same glyph (not inter-letter gaps).
-        if (gap <= 1 && std::abs(prev.box.y - cur.box.y) <= avg_h / 4) {
-            const int nx = prev.box.x;
-            const int ny = std::min(prev.box.y, cur.box.y);
-            const int nmaxx = std::max(prev.box.x + prev.box.w, cur.box.x + cur.box.w);
-            const int nmaxy = std::max(prev.box.y + prev.box.h, cur.box.y + cur.box.h);
-            const int nw = nmaxx - nx;
-            const int nh = nmaxy - ny;
-            std::vector<uint8_t> nb(static_cast<size_t>(nw) * nh, 0);
-            auto blit = [&](const Glyph& g) {
-                for (int yy = 0; yy < g.box.h; ++yy) {
-                    for (int xx = 0; xx < g.box.w; ++xx) {
-                        const uint8_t v = g.bitmap[static_cast<size_t>(yy) * g.box.w + xx];
-                        if (v > 127) {
-                            nb[static_cast<size_t>(g.box.y - ny + yy) * nw + (g.box.x - nx + xx)] = 255;
+    auto merge_pass = [](const std::vector<Glyph>& glyphs) {
+        std::vector<Glyph> merged;
+        merged.push_back(glyphs.front());
+        for (size_t i = 1; i < glyphs.size(); ++i) {
+            Glyph& prev = merged.back();
+            const Glyph& cur = glyphs[i];
+            const int gap = cur.box.x - (prev.box.x + prev.box.w);
+            const int avg_h = (prev.box.h + cur.box.h) / 2;
+            const int avg_w = (prev.box.w + cur.box.w) / 2;
+            const int x_overlap = std::min(prev.box.x + prev.box.w, cur.box.x + cur.box.w)
+                - std::max(prev.box.x, cur.box.x);
+            const bool horizontal_touch = gap <= std::max(2, avg_w / 8);
+            const bool vertical_stack = x_overlap > std::max(1, avg_w / 3)
+                && std::abs((prev.box.y + prev.box.h) - cur.box.y) <= std::max(2, avg_h / 4);
+            const bool same_row = std::abs(prev.box.y - cur.box.y) <= avg_h / 2;
+            if ((horizontal_touch && same_row) || vertical_stack) {
+                const int nx = std::min(prev.box.x, cur.box.x);
+                const int ny = std::min(prev.box.y, cur.box.y);
+                const int nmaxx = std::max(prev.box.x + prev.box.w, cur.box.x + cur.box.w);
+                const int nmaxy = std::max(prev.box.y + prev.box.h, cur.box.y + cur.box.h);
+                const int nw = nmaxx - nx;
+                const int nh = nmaxy - ny;
+                if (nw <= 0 || nh <= 0) {
+                    merged.push_back(cur);
+                    continue;
+                }
+                std::vector<uint8_t> nb(static_cast<size_t>(nw) * nh, 0);
+                auto blit = [&](const Glyph& g) {
+                    for (int yy = 0; yy < g.box.h; ++yy) {
+                        for (int xx = 0; xx < g.box.w; ++xx) {
+                            const uint8_t v = g.bitmap[static_cast<size_t>(yy) * g.box.w + xx];
+                            if (v <= 127) {
+                                continue;
+                            }
+                            const int dst_x = g.box.x - nx + xx;
+                            const int dst_y = g.box.y - ny + yy;
+                            if (dst_x < 0 || dst_y < 0 || dst_x >= nw || dst_y >= nh) {
+                                continue;
+                            }
+                            nb[static_cast<size_t>(dst_y) * nw + dst_x] = 255;
                         }
                     }
-                }
-            };
-            blit(prev);
-            blit(cur);
-            prev.box = {nx, ny, nw, nh};
-            prev.bitmap = std::move(nb);
-        } else {
-            merged.push_back(cur);
+                };
+                blit(prev);
+                blit(cur);
+                prev.box = {nx, ny, nw, nh};
+                prev.bitmap = std::move(nb);
+            } else {
+                merged.push_back(cur);
+            }
         }
+        return merged;
+    };
+
+    std::vector<Glyph> merged = glyphs;
+    for (int pass = 0; pass < 4; ++pass) {
+        const auto next = merge_pass(merged);
+        if (next.size() == merged.size()) {
+            break;
+        }
+        merged = std::move(next);
     }
     return merged;
 }

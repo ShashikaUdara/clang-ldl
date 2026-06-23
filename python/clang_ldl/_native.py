@@ -3,7 +3,7 @@ from __future__ import annotations
 import ctypes
 import os
 import sys
-from ctypes import POINTER, c_char_p, c_float, c_int, c_size_t, c_ubyte
+from ctypes import POINTER, c_char, c_char_p, c_float, c_int, c_size_t, c_ubyte, c_uint32
 from pathlib import Path
 
 from clang_ldl.models import ExtractionResult
@@ -15,12 +15,28 @@ CLANG_LDL_ERR_ALLOC = -3
 CLANG_LDL_ERR_NULL = -4
 
 
+class ClangLdlGlyphInfo(ctypes.Structure):
+    _fields_ = [
+        ("codepoint", c_uint32),
+        ("confidence", c_float),
+        ("x", c_int),
+        ("y", c_int),
+        ("w", c_int),
+        ("h", c_int),
+        ("ncc_score", c_float),
+        ("struct_score", c_float),
+        ("pack_id", c_char * 32),
+    ]
+
+
 class ClangLdlResult(ctypes.Structure):
     _fields_ = [
         ("text", c_char_p),
         ("text_len", c_size_t),
         ("mean_confidence", c_float),
         ("glyph_count", c_int),
+        ("glyphs", POINTER(ClangLdlGlyphInfo)),
+        ("glyph_info_count", c_int),
     ]
 
 
@@ -48,10 +64,15 @@ def load_native_library() -> ctypes.CDLL:
         except OSError as exc:
             last_error = exc
     else:
-        msg = "clang_ldl native library not found. Run scripts/build_native.sh first."
+        msg = "clang_ldl native library not found. Run: make build"
         if last_error:
             msg += f" Last error: {last_error}"
         raise OSError(msg)
+
+    # Ensure packs directory is set for native loader.
+    packs = _packs_dir()
+    if packs.is_dir() and "CLANG_LDL_PACKS_DIR" not in os.environ:
+        os.environ["CLANG_LDL_PACKS_DIR"] = str(packs)
 
     lib.clang_ldl_extract_text.argtypes = [c_char_p, POINTER(ClangLdlResult)]
     lib.clang_ldl_extract_text.restype = c_int
@@ -68,6 +89,14 @@ def load_native_library() -> ctypes.CDLL:
     lib.clang_ldl_version.argtypes = []
     lib.clang_ldl_version.restype = c_char_p
     return lib
+
+
+def _packs_dir() -> Path:
+    env = os.environ.get("CLANG_LDL_PACKS_DIR")
+    if env:
+        return Path(env)
+    root = Path(__file__).resolve().parent.parent.parent
+    return root / "packs"
 
 
 _LIB: ctypes.CDLL | None = None
@@ -105,6 +134,8 @@ def extract_text_from_file(path: str | Path) -> ExtractionResult:
         )
     finally:
         lib.clang_ldl_free_result(ctypes.byref(result))
+        result.text = None
+        result.glyphs = None
 
 
 def extract_text_from_image_bytes(data: bytes, width: int, height: int, channels: int) -> ExtractionResult:
@@ -124,3 +155,5 @@ def extract_text_from_image_bytes(data: bytes, width: int, height: int, channels
         )
     finally:
         lib.clang_ldl_free_result(ctypes.byref(result))
+        result.text = None
+        result.glyphs = None

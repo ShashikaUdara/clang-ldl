@@ -1,7 +1,9 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -fPIC -Wall -Wextra
 INCLUDES = -Iinclude -Ithird_party
-SRCS = src/api.cpp src/image.cpp src/pipeline.cpp src/glyph_matcher.cpp
+SRCS = src/api.cpp src/image.cpp src/pipeline.cpp src/glyph_matcher.cpp \
+       src/pack_loader.cpp src/struct_features.cpp src/template_matcher.cpp \
+       src/script_router.cpp
 OBJS = $(SRCS:src/%.cpp=build/%.o)
 TARGET = build/libclang_ldl.so
 

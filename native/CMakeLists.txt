@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(clang_ldl_native VERSION 0.1.0 LANGUAGES CXX C)
+project(clang_ldl_native VERSION 0.3.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,6 +10,10 @@ add_library(clang_ldl SHARED
     src/image.cpp
     src/pipeline.cpp
     src/glyph_matcher.cpp
+    src/pack_loader.cpp
+    src/struct_features.cpp
+    src/template_matcher.cpp
+    src/script_router.cpp
 )
 
 target_include_directories(clang_ldl

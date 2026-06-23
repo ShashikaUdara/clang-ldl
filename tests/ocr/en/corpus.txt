@@ -1,0 +1,8 @@
+HELLO
+ABC
+THE
+TEST
+ENGLISH
+WORLD
+clang-ldl
+OCR

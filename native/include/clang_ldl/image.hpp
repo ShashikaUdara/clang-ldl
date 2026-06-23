@@ -18,6 +18,9 @@ struct Glyph {
     std::vector<uint8_t> bitmap; // row-major 0/255, size = box.w * box.h
     uint32_t codepoint = 0;
     float confidence = 0.f;
+    float ncc_score = 0.f;
+    float struct_score = 0.f;
+    std::string pack_id;
 };
 
 struct Image {
@@ -32,7 +35,10 @@ struct Image {
     Image to_grayscale() const;
     Image gaussian_blur(int radius = 1) const;
     Image otsu_threshold() const;
+    Image sauvola_threshold(int window = 15, float k = 0.5f, float R = 128.f) const;
     Image invert() const;
+    Image deskew(float max_degrees = 15.f) const;
+    Image rotate(float radians) const;
 
     uint8_t at(int x, int y) const;
     void set(int x, int y, uint8_t v);

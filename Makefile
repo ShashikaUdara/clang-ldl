@@ -13,16 +13,19 @@ PYTHON      ?= python3
 PIP         ?= $(PYTHON) -m pip
 PYTEST      ?= $(PYTHON) -m pytest
 
+PACKS_DIR     := $(ROOT)/packs
+
 # Used by test / example targets when the package is not pip-installed.
 export PYTHONPATH := $(PYTHON_DIR)$(if $(PYTHONPATH),:$(PYTHONPATH),)
 export CLANG_LDL_LIB := $(NATIVE_LIB)
+export CLANG_LDL_PACKS_DIR := $(PACKS_DIR)
 
 JOBS        ?= $(shell nproc 2>/dev/null || echo 4)
 VENV_DIR    := $(ROOT)/.venv
 
 .PHONY: help all setup build native native-cmake native-make clean \
         install install-dev develop uninstall \
-        test test-all test-text verify \
+        test test-all test-text verify test-ocr-en build-packs \
         example example-json languages languages-json \
         env print-env check-deps venv
 
@@ -54,7 +57,11 @@ setup: build install verify
 	@echo "  make languages"
 
 ## build: Build the C/C++ shared library (alias: native)
-build: native
+build: build-packs native
+
+## build-packs: Generate .clpk glyph template packs
+build-packs:
+	$(PYTHON) "$(ROOT)/tools/pack_builder.py" --pack latin --output "$(PACKS_DIR)/latin.clpk"
 
 ## native: Compile libclang_ldl.so (CMake if available, else native/Makefile)
 native:
@@ -126,8 +133,12 @@ test-text:
 [print(c + ': ' + a.detect(t)[0].name) for c, t in samples.items()]"
 
 ## verify: Build, list languages, and run tests
-verify: build languages test-smoke
+verify: build languages test-smoke test-ocr-en
 	@echo "Verification passed."
+
+## test-ocr-en: English OCR golden corpus (target 0% CER)
+test-ocr-en: build
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_en.py"
 
 ## example: Run language detection on synthetic HELLO image
 example: build
@@ -152,6 +163,7 @@ env: print-env
 print-env:
 	@echo "export PYTHONPATH=\"$(PYTHON_DIR):\$$PYTHONPATH\""
 	@echo "export CLANG_LDL_LIB=\"$(NATIVE_LIB)\""
+	@echo "export CLANG_LDL_PACKS_DIR=\"$(PACKS_DIR)\""
 
 ## check-deps: Verify compiler and Python are available
 check-deps:
