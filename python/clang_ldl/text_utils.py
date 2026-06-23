@@ -29,7 +29,7 @@ def is_ascii_ocr_text(text: str) -> bool:
 
 
 def uses_native_ocr(text: str) -> bool:
-    """True when text is covered by a loaded native OCR pack (Tier A + Latin)."""
+    """True when text is covered by a loaded native OCR pack (Tier A/B + Latin)."""
     from clang_ldl.language_registry import SUPPORTED_LANGUAGES
 
     if not text.strip():
@@ -51,7 +51,7 @@ def uses_native_ocr(text: str) -> bool:
 
 
 def ocr_pack_id_for_text(text: str) -> str | None:
-    """Map text to a native .clpk id when unambiguous (Tier A + Latin)."""
+    """Map text to a native .clpk id when unambiguous (Tier A/B + Latin)."""
     if not text.strip():
         return None
     if is_ascii_ocr_text(text):
@@ -70,6 +70,16 @@ def ocr_pack_id_for_text(text: str) -> str | None:
             pack_votes["armenian"] = pack_votes.get("armenian", 0) + 1
         elif 0x10A0 <= cp <= 0x10FF or 0x2D00 <= cp <= 0x2D2F:
             pack_votes["georgian"] = pack_votes.get("georgian", 0) + 1
+        elif 0x0590 <= cp <= 0x05FF:
+            pack_votes["hebrew"] = pack_votes.get("hebrew", 0) + 1
+        elif 0x0E00 <= cp <= 0x0E7F:
+            pack_votes["thai"] = pack_votes.get("thai", 0) + 1
+        elif 0x0E80 <= cp <= 0x0EFF:
+            pack_votes["lao"] = pack_votes.get("lao", 0) + 1
+        elif 0x1000 <= cp <= 0x109F or 0xAA60 <= cp <= 0xAA7F:
+            pack_votes["myanmar"] = pack_votes.get("myanmar", 0) + 1
+        elif 0x1200 <= cp <= 0x137F or 0x1380 <= cp <= 0x139F or 0x2D80 <= cp <= 0x2DDF:
+            pack_votes["ethiopic"] = pack_votes.get("ethiopic", 0) + 1
         else:
             return None
     if not pack_votes:

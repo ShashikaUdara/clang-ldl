@@ -44,4 +44,7 @@ const GlyphPack& pack_by_id(const std::string& pack_id);
 /** Tier A pack ids used by script_router. */
 const std::vector<std::string>& tier_a_pack_ids();
 
+/** All native OCR pack ids (Tier A + Tier B). */
+const std::vector<std::string>& native_pack_ids();
+
 } // namespace clang_ldl

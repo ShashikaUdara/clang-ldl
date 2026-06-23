@@ -81,6 +81,65 @@ PACK_SPECS: dict[str, dict] = {
         "w_struct": 0.05,
         "w_aspect": 0.10,
     },
+    "hebrew": {
+        "kind": "ttf",
+        "font": "NotoSansHebrew-Regular.ttf",
+        "codepoints": list(range(0x05D0, 0x05EB)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "rtl": True,
+        "threshold": 0.15,
+        "w_ncc": 0.85,
+        "w_struct": 0.05,
+        "w_aspect": 0.10,
+    },
+    "thai": {
+        "kind": "ttf",
+        "font": "NotoSansThai-Regular.ttf",
+        "codepoints": list(range(0x0E01, 0x0E2F))
+        + list(range(0x0E30, 0x0E3B))
+        + list(range(0x0E40, 0x0E4F)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.15,
+        "w_ncc": 0.82,
+        "w_struct": 0.08,
+        "w_aspect": 0.10,
+    },
+    "lao": {
+        "kind": "ttf",
+        "font": "NotoSansLao-Regular.ttf",
+        "codepoints": list(range(0x0E81, 0x0EAE))
+        + list(range(0x0EAF, 0x0EDD)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.15,
+        "w_ncc": 0.82,
+        "w_struct": 0.08,
+        "w_aspect": 0.10,
+    },
+    "myanmar": {
+        "kind": "ttf",
+        "font": "NotoSansMyanmar-Regular.ttf",
+        "codepoints": list(range(0x1000, 0x102C)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.14,
+        "w_ncc": 0.55,
+        "w_struct": 0.35,
+        "w_aspect": 0.10,
+    },
+    "ethiopic": {
+        "kind": "ttf",
+        "font": "NotoSansEthiopic-Regular.ttf",
+        "codepoints": list(range(0x1200, 0x1248)),
+        "grid_w": 40,
+        "grid_h": 56,
+        "threshold": 0.14,
+        "w_ncc": 0.80,
+        "w_struct": 0.10,
+        "w_aspect": 0.10,
+    },
 }
 
 
@@ -121,7 +180,14 @@ def build_latin_pack() -> list[dict]:
     return glyphs
 
 
-def build_ttf_pack(font_name: str, codepoints: list[int], *, grid_w: int, grid_h: int) -> list[dict]:
+def build_ttf_pack(
+    font_name: str,
+    codepoints: list[int],
+    *,
+    grid_w: int,
+    grid_h: int,
+    rtl: bool = False,
+) -> list[dict]:
     font_path = resolve_font(font_name)
     glyphs = []
     seen: set[int] = set()
@@ -129,7 +195,9 @@ def build_ttf_pack(font_name: str, codepoints: list[int], *, grid_w: int, grid_h
         if cp in seen:
             continue
         seen.add(cp)
-        bitmap = render_cell_glyph_bitmap(cp, font_path, grid_w=grid_w, grid_h=grid_h)
+        bitmap = render_cell_glyph_bitmap(
+            cp, font_path, grid_w=grid_w, grid_h=grid_h, rtl=rtl
+        )
         if not any(bitmap):
             continue
         feats = compute_features(bitmap, grid_w, grid_h)
@@ -152,7 +220,13 @@ def build_pack(pack_id: str) -> tuple[list[dict], int, int]:
     grid_h = spec.get("grid_h", GRID_H)
     if spec["kind"] == "bitmap5x7":
         return build_latin_pack(), grid_w, grid_h
-    return build_ttf_pack(spec["font"], spec["codepoints"], grid_w=grid_w, grid_h=grid_h), grid_w, grid_h
+    return build_ttf_pack(
+        spec["font"],
+        spec["codepoints"],
+        grid_w=grid_w,
+        grid_h=grid_h,
+        rtl=bool(spec.get("rtl", False)),
+    ), grid_w, grid_h
 
 
 def write_clpk(
@@ -208,7 +282,7 @@ def main() -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Build every Tier A / Latin pack",
+        help="Build every native OCR pack (Latin + Tier A + Tier B)",
     )
     parser.add_argument(
         "--output",

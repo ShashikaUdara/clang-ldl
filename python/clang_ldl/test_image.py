@@ -179,12 +179,17 @@ def render_unicode_png(text: str, out_path: Path, font_size: int = 48, margin: i
     return out_path
 
 
-# Tier A native OCR — fixed-width line rendering (must match pack_builder fonts).
-OCR_TIER_A_FONTS: dict[str, str] = {
-    "ru": "NotoSans-Regular.ttf",
-    "el": "NotoSans-Regular.ttf",
-    "hy": "NotoSansArmenian-Regular.ttf",
-    "ka": "NotoSansGeorgian-Regular.ttf",
+# Tier A/B native OCR — fixed-width line rendering (must match pack_builder fonts).
+OCR_NATIVE_FONTS: dict[str, tuple[str, bool]] = {
+    "ru": ("NotoSans-Regular.ttf", False),
+    "el": ("NotoSans-Regular.ttf", False),
+    "hy": ("NotoSansArmenian-Regular.ttf", False),
+    "ka": ("NotoSansGeorgian-Regular.ttf", False),
+    "he": ("NotoSansHebrew-Regular.ttf", True),
+    "th": ("NotoSansThai-Regular.ttf", False),
+    "lo": ("NotoSansLao-Regular.ttf", False),
+    "my": ("NotoSansMyanmar-Regular.ttf", False),
+    "am": ("NotoSansEthiopic-Regular.ttf", False),
 }
 
 
@@ -204,13 +209,14 @@ def render_ocr_corpus_image(text: str, out_path: Path, lang: str) -> Path:
     if lang == "en":
         path = out_path if out_path.suffix.lower() == ".ppm" else out_path.with_suffix(".ppm")
         return render_terminal_ppm(text, path)
-    font_name = OCR_TIER_A_FONTS.get(lang)
-    if not font_name:
+    spec = OCR_NATIVE_FONTS.get(lang)
+    if not spec:
         raise ValueError(f"no OCR corpus renderer for language {lang!r}")
+    font_name, rtl = spec
     ocr_render = _load_ocr_render()
     font_path = ocr_render.resolve_font(font_name)
     path = out_path if out_path.suffix.lower() == ".png" else out_path.with_suffix(".png")
-    return ocr_render.render_ocr_png(text, path, font_path)
+    return ocr_render.render_ocr_png(text, path, font_path, rtl=rtl)
 
 
 def render_synthetic_image(text: str, out_path: Path) -> tuple[Path, str]:
@@ -228,14 +234,20 @@ def render_synthetic_image(text: str, out_path: Path) -> tuple[Path, str]:
         return render_terminal_ppm(text, path), "terminal_ppm"
 
     pack_lang = None
-    if ocr_pack_id_for_text(text) == "cyrillic":
-        pack_lang = "ru"
-    elif ocr_pack_id_for_text(text) == "greek":
-        pack_lang = "el"
-    elif ocr_pack_id_for_text(text) == "armenian":
-        pack_lang = "hy"
-    elif ocr_pack_id_for_text(text) == "georgian":
-        pack_lang = "ka"
+    pack_id = ocr_pack_id_for_text(text)
+    pack_to_lang = {
+        "cyrillic": "ru",
+        "greek": "el",
+        "armenian": "hy",
+        "georgian": "ka",
+        "hebrew": "he",
+        "thai": "th",
+        "lao": "lo",
+        "myanmar": "my",
+        "ethiopic": "am",
+    }
+    if pack_id in pack_to_lang:
+        pack_lang = pack_to_lang[pack_id]
 
     if pack_lang is not None:
         path = out_path if suffix in (".png", ".jpg", ".jpeg") else out_path.with_suffix(".png")

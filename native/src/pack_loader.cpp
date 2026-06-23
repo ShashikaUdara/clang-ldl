@@ -113,6 +113,13 @@ const std::vector<std::string>& tier_a_pack_ids() {
     return ids;
 }
 
+const std::vector<std::string>& native_pack_ids() {
+    static const std::vector<std::string> ids = {
+        "latin", "cyrillic", "greek", "armenian", "georgian",
+        "hebrew", "thai", "lao", "myanmar", "ethiopic"};
+    return ids;
+}
+
 const GlyphPack& pack_by_id(const std::string& pack_id) {
     static std::mutex mu;
     static std::unordered_map<std::string, GlyphPack> cache;

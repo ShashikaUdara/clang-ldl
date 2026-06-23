@@ -38,7 +38,7 @@ std::string route_script_for_line(const Image& line_binary) {
     std::string best_non_latin_id = "cyrillic";
     float latin_score = -1.f;
 
-    for (const std::string& pack_id : tier_a_pack_ids()) {
+    for (const std::string& pack_id : native_pack_ids()) {
         try {
             const GlyphPack& pack = pack_by_id(pack_id);
             float sum = 0.f;

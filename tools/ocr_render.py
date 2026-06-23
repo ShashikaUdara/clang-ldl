@@ -8,6 +8,8 @@ GRID_W = 20
 GRID_H = 28
 TIER_A_GRID_W = 28
 TIER_A_GRID_H = 40
+TIER_B_SYLLABLE_GRID_W = 40
+TIER_B_SYLLABLE_GRID_H = 56
 FONT_SIZE = 56
 LETTER_SPACING = 14
 INK_THRESHOLD = 180
@@ -175,13 +177,21 @@ def render_cell_glyph_bitmap(
     grid_h: int = GRID_H,
     font_size: int = FONT_SIZE,
     letter_spacing: int = LETTER_SPACING,
+    rtl: bool = False,
 ) -> list[int]:
     """Pack template via the same line renderer used in OCR tests."""
     import tempfile
 
     with tempfile.TemporaryDirectory() as td:
         img_path = Path(td) / "glyph.png"
-        render_ocr_png(chr(codepoint), img_path, font_path, font_size=font_size, letter_spacing=letter_spacing)
+        render_ocr_png(
+            chr(codepoint),
+            img_path,
+            font_path,
+            font_size=font_size,
+            letter_spacing=letter_spacing,
+            rtl=rtl,
+        )
         return extract_first_glyph_bitmap(img_path, grid_w=grid_w, grid_h=grid_h)
 
 
@@ -193,6 +203,7 @@ def render_ocr_png(
     font_size: int = FONT_SIZE,
     letter_spacing: int = LETTER_SPACING,
     margin: int = 24,
+    rtl: bool = False,
 ) -> Path:
     """Render a line with fixed advance width for reliable column-gap segmentation."""
     from PIL import Image, ImageDraw, ImageFont
@@ -206,10 +217,16 @@ def render_ocr_png(
     img = Image.new("RGB", (width, height), color="white")
     draw = ImageDraw.Draw(img)
     y = margin
-    x = margin
-    for ch in text:
-        draw.text((x, y), ch, fill="black", font=font)
-        x += adv
+    if rtl:
+        x = width - margin - adv
+        for ch in text:
+            draw.text((x, y), ch, fill="black", font=font)
+            x -= adv
+    else:
+        x = margin
+        for ch in text:
+            draw.text((x, y), ch, fill="black", font=font)
+            x += adv
 
     gray = _hard_binarize(img)
     img = Image.merge("RGB", (gray, gray, gray))

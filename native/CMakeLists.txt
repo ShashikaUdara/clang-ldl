@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(clang_ldl_native VERSION 0.3.0 LANGUAGES CXX C)
+project(clang_ldl_native VERSION 0.5.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,6 +14,9 @@ add_library(clang_ldl SHARED
     src/struct_features.cpp
     src/template_matcher.cpp
     src/script_router.cpp
+    src/rtl.cpp
+    src/mark_attachment.cpp
+    src/script_preprocess.cpp
 )
 
 target_include_directories(clang_ldl

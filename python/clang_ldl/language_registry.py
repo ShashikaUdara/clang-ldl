@@ -88,6 +88,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("Israel",),
         unicode_ranges=(UnicodeRange(0x0590, 0x05FF),),
         sample_char="א",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="el",
@@ -209,6 +210,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("Thailand",),
         unicode_ranges=(UnicodeRange(0x0E00, 0x0E7F),),
         sample_char="ท",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="lo",
@@ -217,6 +219,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("Laos",),
         unicode_ranges=(UnicodeRange(0x0E80, 0x0EFF),),
         sample_char="ລ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="my",
@@ -228,6 +231,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
             UnicodeRange(0xAA60, 0xAA7F),
         ),
         sample_char="မ",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="am",
@@ -240,6 +244,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
             UnicodeRange(0x2D80, 0x2DDF),
         ),
         sample_char="አ",
+        ocr_native=True,
     ),
 )
 

@@ -134,7 +134,7 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
 extern "C" {
 
 const char* clang_ldl_version(void) {
-    return "0.4.0";
+    return "0.5.0";
 }
 
 int clang_ldl_extract_text(const char* image_path, ClangLdlResult* out) {

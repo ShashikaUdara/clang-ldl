@@ -508,6 +508,8 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 **Exit criteria:** 9 languages total with native OCR (en + 8).
 
+**Status:** Complete (2026-06-23). Five Tier B packs (`hebrew`, `thai`, `lao`, `myanmar`, `ethiopic`), `rtl.cpp` + `mark_attachment.cpp` + `script_preprocess.cpp`, RTL line rendering in `ocr_render.py`, `native_pack_ids()` router voting, v0.5.0, `make test-ocr-tier-b`, `ocr_native` for he/th/lo/my/am.
+
 ---
 
 ### Phase L3 — Indic engine (weeks 14–27)
@@ -712,6 +714,7 @@ For a single engineer, implement in this order (highest ROI first):
 | 2026-06-23 | Added §2 Feasibility analysis — accuracy tiers, per-script feasibility scores, logical vs ML comparison, go/no-go recommendation. |
 | 2026-06-23 | **Phase L0 complete.** `.clpk` v1, `pack_builder.py`, `latin.clpk`, pack loader, struct features, script router stub, diagnostics C API (v0.3.0), `make test-ocr-en` at 0% CER. |
 | 2026-06-23 | **Phase L1 complete.** Tier A packs (cyrillic, greek, armenian, georgian), script router voting, UTF-8 OCR (v0.4.0), `make test-ocr-tier-a`, `ocr_native` for ru/el/hy/ka. |
+| 2026-06-23 | **Phase L2 complete.** Tier B packs (hebrew, thai, lao, myanmar, ethiopic), RTL + mark attachment preprocess, v0.5.0, `make test-ocr-tier-b`, `ocr_native` for he/th/lo/my/am (10/21 native OCR). |
 
 ---
 
@@ -728,9 +731,8 @@ For a single engineer, implement in this order (highest ROI first):
 
 ## 16. Next action
 
-**Phase L2 — Tier B scripts (Hebrew, Thai, Lao, Myanmar, Ethiopic):**
+**Phase L3 — Indic engine (Devanagari segmentation + hi pack):**
 
-1. Add `hebrew.clpk` + `rtl.cpp` layout rules
-2. Add `thai.clpk` with mark-attachment segmentation
-3. Extend `script_router` for Tier B packs
-4. Add per-language OCR corpora and `make test-ocr-tier-b`
+1. Implement `segment_indic.cpp` (shirorekha, akshara clustering)
+2. Add `devanagari.clpk` and Hindi OCR corpus
+3. Extend `make test-ocr-indic` harness
