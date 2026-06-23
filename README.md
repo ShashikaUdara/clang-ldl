@@ -58,6 +58,7 @@ Legacy script (still works): `./scripts/build_native.sh`
 - **python/clang_ldl/** — ctypes bindings + Unicode script → language analysis
 - **examples/** — CLI test program
 - **docs/clang.md** — feature list, phases, ETAs, progress
+- **docs/ocr-logical.md** — non-AI OCR roadmap for all 21 languages
 
 ## Environment
 
@@ -67,7 +68,7 @@ Legacy script (still works): `./scripts/build_native.sh`
 
 - **Image OCR** works best on high-contrast printed **Latin** text (`HELLO`, `ABC`, …).
 - **All 21 languages** are identified via **Unicode script analysis** when you pass text with `--synthetic` (non-Latin) or `--text`.
-- Non-Latin `--synthetic` renders a PNG and identifies language from the Unicode you provide; C++ OCR for those scripts is Phase 1.14 / Phase 2.
+- Non-Latin image OCR is planned in [docs/ocr-logical.md](docs/ocr-logical.md) (non-AI template packs + rule-based segmentation).
 
 ```bash
 # Latin — full native OCR pipeline
@@ -81,4 +82,4 @@ python3 examples/detect_language.py --synthetic "नमस्ते"
 python3 examples/detect_language.py --text "नमस्ते"
 ```
 
-See [docs/clang.md](docs/clang.md) for the full roadmap.
+See [docs/clang.md](docs/clang.md) for the project overview and [docs/ocr-logical.md](docs/ocr-logical.md) for the OCR implementation plan.

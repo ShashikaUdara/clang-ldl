@@ -45,7 +45,7 @@
 | F1.11 | Example CLI test program with synthetic image generation | Done |
 | F1.12 | Unit tests for Python language analysis | Done |
 | F1.13 | Deskew (Hough / min-area rectangle) | Planned |
-| F1.14 | Multi-script template packs (Cyrillic, Greek, Arabic blocks) | Planned |
+| F1.14 | Multi-script template packs (Cyrillic, Greek, Arabic blocks) | Planned — see [ocr-logical.md](ocr-logical.md) |
 | F1.15 | Font metric hints (stroke width, x-height ratio) | Planned |
 | F1.16 | Diagnostics API (line boxes, glyph boxes, match scores) | Partial |
 
@@ -213,7 +213,7 @@ python examples/list_languages.py --code hi
 **Important distinction**
 
 - **Script identification (all 21):** Once text is available as Unicode — from OCR, user input, or another engine — clang-ldl maps characters to languages.
-- **Image OCR (English only today):** The C++ template matcher reads Latin glyphs from images. Other scripts need Phase 1.14 template packs or Phase 2 ML models.
+- **Image OCR (English only today):** The C++ template matcher reads Latin glyphs from images. Other scripts need the [logical OCR roadmap](ocr-logical.md) (non-AI template packs + rule-based segmentation).
 
 
 ## API Sketch
@@ -253,7 +253,7 @@ if (clang_ldl_extract_text("image.png", &result) == CLANG_LDL_OK) {
 - Best **image OCR** results on high-contrast, horizontal, printed **Latin** text.
 - All **21 languages** are supported for **script-based identification** when Unicode text is available.
 - Handwriting, heavy noise, rotation, and decorative fonts reduce OCR accuracy.
-- Non-Latin **image** recognition requires Phase 1.14 template packs or Phase 2 models.
+- Non-Latin **image** recognition follows the [logical OCR roadmap](ocr-logical.md); ML is optional in Phase 2.
 - Language detection is **script-based** (e.g. Cyrillic → Russian, Devanagari → Hindi), not semantic disambiguation across languages that share a script.
 
 ---
