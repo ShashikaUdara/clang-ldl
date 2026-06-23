@@ -32,6 +32,8 @@ class DetectionResult:
     languages: list[DetectedLanguage] = field(default_factory=list)
     mean_confidence: float = 0.0
     glyph_count: int = 0
+    ocr_text: str = ""
+    identification_source: str = "ocr"
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -39,4 +41,6 @@ class DetectionResult:
             "languages": [lang.to_dict() for lang in self.languages],
             "mean_confidence": self.mean_confidence,
             "glyph_count": self.glyph_count,
+            "ocr_text": self.ocr_text,
+            "identification_source": self.identification_source,
         }

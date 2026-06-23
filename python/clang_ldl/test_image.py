@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from clang_ldl.text_utils import is_ascii_ocr_text
+
 # Printable ASCII 32..126 — 5x7 bit rows (MSB left).
 FONT5x7: tuple[tuple[int, ...], ...] = (
     (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
@@ -134,3 +136,58 @@ def render_terminal_ppm(text: str, out_path: Path, scale: int = 4, margin: int =
         f.write(pixels)
 
     return out_path
+
+
+def _find_unicode_font(size: int = 48):
+    from PIL import ImageFont
+
+    candidates = [
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansSinhala-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "NotoSans-Regular.ttf",
+        "DejaVuSans.ttf",
+    ]
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def render_unicode_png(text: str, out_path: Path, font_size: int = 48, margin: int = 24) -> Path:
+    """Render Unicode text with a system font (for non-Latin synthetic images)."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    font = _find_unicode_font(font_size)
+    probe = Image.new("RGB", (1, 1))
+    draw = ImageDraw.Draw(probe)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    width = max(160, text_w + margin * 2)
+    height = max(80, text_h + margin * 2)
+
+    img = Image.new("RGB", (width, height), color="white")
+    draw = ImageDraw.Draw(img)
+    draw.text((margin, margin), text, fill="black", font=font)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out_path)
+    return out_path
+
+
+def render_synthetic_image(text: str, out_path: Path) -> tuple[Path, str]:
+    """
+    Pick renderer by script. Returns (path, renderer_name).
+    Latin ASCII -> PPM terminal font (native OCR).
+    Other Unicode -> PNG (script analysis fallback).
+    """
+    suffix = out_path.suffix.lower()
+    if is_ascii_ocr_text(text) and suffix in (".ppm", ""):
+        path = out_path if suffix == ".ppm" else out_path.with_suffix(".ppm")
+        return render_terminal_ppm(text, path), "terminal_ppm"
+    path = out_path if suffix in (".png", ".jpg", ".jpeg") else out_path.with_suffix(".png")
+    return render_unicode_png(text, path), "unicode_png"

@@ -114,7 +114,7 @@ clang-ldl/
 
 **Phase 1 exit criteria**
 
-- [x] Build native library with `./scripts/build_native.sh`
+- [x] Build native library with `make build` (or `./scripts/build_native.sh`)
 - [x] `pip install -e python/` installs Python package
 - [x] Example detects English from a synthetic PNG
 - [x] pytest passes for language analyzer
