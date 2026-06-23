@@ -1,0 +1,8 @@
+native/build/
+native/**/*.o
+__pycache__/
+*.egg-info/
+.venv/
+*.png
+.pytest_cache/
+clang_ldl_synthetic.png
