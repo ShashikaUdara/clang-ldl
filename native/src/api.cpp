@@ -56,7 +56,14 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
     try {
         const clang_ldl::Image binary = clang_ldl::preprocess(input);
         auto lines = clang_ldl::find_text_lines(binary);
-        lines = clang_ldl::merge_adjacent_text_lines(lines, std::max(8, binary.height / 12));
+        const bool tall_page = binary.height > 200;
+        const int merge_gap =
+            tall_page ? 8 : std::max(8, binary.height / 12);
+        lines = clang_ldl::merge_adjacent_text_lines(lines, merge_gap);
+        if (tall_page) {
+            const int max_line_h = std::max(48, binary.height / 10);
+            lines = clang_ldl::split_tall_text_lines(lines, binary, max_line_h);
+        }
         std::vector<clang_ldl::Glyph> all_glyphs;
 
         for (const auto& line_box : lines) {

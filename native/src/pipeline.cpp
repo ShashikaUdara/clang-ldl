@@ -133,6 +133,40 @@ std::vector<Rect> merge_adjacent_text_lines(const std::vector<Rect>& lines, int 
     return merged;
 }
 
+std::vector<Rect> split_tall_text_lines(
+    const std::vector<Rect>& lines, const Image& binary, int max_h) {
+    if (max_h <= 0) {
+        return lines;
+    }
+    std::vector<Rect> out;
+    out.reserve(lines.size());
+    for (const Rect& r : lines) {
+        if (r.h <= max_h) {
+            out.push_back(r);
+            continue;
+        }
+        Image crop;
+        crop.width = r.w;
+        crop.height = r.h;
+        crop.channels = 1;
+        crop.pixels.resize(static_cast<size_t>(r.w) * r.h);
+        for (int y = 0; y < r.h; ++y) {
+            for (int x = 0; x < r.w; ++x) {
+                crop.set(x, y, binary.at(r.x + x, r.y + y));
+            }
+        }
+        auto sub = find_text_lines(crop);
+        if (sub.empty()) {
+            out.push_back(r);
+            continue;
+        }
+        for (const Rect& s : sub) {
+            out.push_back({r.x + s.x, r.y + s.y, s.w, s.h});
+        }
+    }
+    return out;
+}
+
 std::vector<Glyph> segment_glyphs(const Image& line_binary) {
     const int w = line_binary.width;
     const int h = line_binary.height;
@@ -225,7 +259,13 @@ std::vector<Glyph> segment_glyphs(const Image& line_binary) {
             projected.push_back(std::move(g));
         }
         if (!projected.empty()) {
-            return projected;
+            const bool lone_oversized =
+                h > 60
+                && projected.size() == 1
+                && projected.front().box.w > w * 6 / 10;
+            if (!lone_oversized) {
+                return projected;
+            }
         }
     }
 

@@ -39,6 +39,12 @@ MatchResult match_glyph_fallback_packs(const Glyph& glyph, const std::string& sk
 void recognize_glyphs_with_pack(std::vector<Glyph>& glyphs, const GlyphPack& pack) {
     const bool fallback = mixed_script_fallback_enabled();
     for (auto& g : glyphs) {
+        if (g.box.w > 120 && g.box.w > g.box.h * 2) {
+            g.codepoint = 0;
+            g.confidence = 0.f;
+            g.pack_id = pack.id;
+            continue;
+        }
         const auto norm = normalize_glyph_bitmap(g, pack.grid_w, pack.grid_h);
         MatchResult m = match_glyph(norm, pack);
         if (fallback && m.confidence < pack.threshold) {

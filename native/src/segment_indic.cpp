@@ -326,7 +326,13 @@ bool pack_is_indic(const std::string& pack_id) {
 std::vector<Glyph> segment_indic_glyphs(const Image& line_binary) {
     auto glyphs = segment_glyphs(line_binary);
     if (!glyphs.empty() && looks_like_fixed_width_cells(glyphs)) {
-        return glyphs;
+        const bool lone_oversized =
+            line_binary.height > 60
+            && glyphs.size() == 1
+            && glyphs.front().box.w > line_binary.width * 6 / 10;
+        if (!lone_oversized) {
+            return glyphs;
+        }
     }
 
     const ShirorekhaBand band = detect_shirorekha(line_binary);
