@@ -12,7 +12,11 @@
 cd python && pip install -e ".[dev]"
 
 # Run example on synthetic English text
-python ../examples/detect_language.py --synthetic "Hello World"
+python ../examples/detect_language.py --synthetic "HELLO"
+
+# See how many languages are supported (21)
+python ../examples/list_languages.py
+python ../examples/list_languages.py --json
 
 # Run tests
 pytest

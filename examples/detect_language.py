@@ -15,7 +15,7 @@ _REPO_PYTHON = Path(__file__).resolve().parents[1] / "python"
 if str(_REPO_PYTHON) not in sys.path:
     sys.path.insert(0, str(_REPO_PYTHON))
 
-from clang_ldl import ImageLanguageDetector
+from clang_ldl import ImageLanguageDetector, language_coverage_summary, supported_language_count
 from clang_ldl.test_image import render_terminal_ppm
 
 
@@ -50,7 +50,20 @@ def main() -> int:
         help="Where to save synthetic image (with --synthetic)",
     )
     parser.add_argument("--json", action="store_true", help="Print JSON result")
+    parser.add_argument(
+        "--show-support",
+        action="store_true",
+        help="Print supported language count before detection",
+    )
     args = parser.parse_args()
+
+    if args.show_support:
+        summary = language_coverage_summary()
+        print(
+            f"Supported languages: {summary['total_supported']} "
+            f"(script ID: {summary['script_detection_count']}, "
+            f"native OCR: {summary['ocr_native_count']})"
+        )
 
     detector = ImageLanguageDetector()
 

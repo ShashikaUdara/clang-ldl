@@ -40,6 +40,7 @@
 | F1.7 | Template-based Latin recognition (A–Z, a–z, 0–9, punctuation) | Done |
 | F1.8 | C API (`clang_ldl_extract_text`) for Python ctypes binding | Done |
 | F1.9 | Python `LanguageAnalyzer` — Unicode script → language mapping | Done |
+| F1.9b | 21-language registry (English + 20 scripts) with introspection API | Done |
 | F1.10 | High-level `ImageLanguageDetector` API | Done |
 | F1.11 | Example CLI test program with synthetic image generation | Done |
 | F1.12 | Unit tests for Python language analysis | Done |
@@ -162,20 +163,75 @@ clang-ldl/
 |------|--------|
 | 2026-06-23 | Created `clang.md`, project scaffold, C++ core (pipeline, segmentation, Latin templates), C API, Python package, example CLI, unit tests. Milestones P1-M1 through P1-M6 implemented. |
 | 2026-06-23 | Fixed foreground inversion, glyph merge heuristics, template/grid alignment (20×28 @ 4× scale). Synthetic PPM tests recognize `HELLO`, `ABC`, `THE` at ~0.66 mean confidence. |
+| 2026-06-23 | Added `language_registry.py` with 21 languages (English + 20 target scripts). Introspection via `supported_language_count()`, `list_supported_languages()`, `language_coverage_summary()`, and `examples/list_languages.py`. |
 
 ---
+
+## Supported Languages (21)
+
+clang-ldl identifies **21 languages**: English plus the 20 scripts in the project ambition list.
+
+| # | Code | Language | Script | Image OCR (Phase 1) |
+|---|------|----------|--------|---------------------|
+| 1 | en | English | Latin | Yes (native templates) |
+| 2 | ru | Russian | Cyrillic | Script analysis |
+| 3 | ar | Arabic | Arabic | Script analysis |
+| 4 | he | Hebrew | Hebrew | Script analysis |
+| 5 | el | Greek | Greek | Script analysis |
+| 6 | hy | Armenian | Armenian | Script analysis |
+| 7 | ka | Georgian | Georgian (Mkhedruli) | Script analysis |
+| 8 | hi | Hindi | Devanagari | Script analysis |
+| 9 | bn | Bengali | Bengali–Assamese | Script analysis |
+| 10 | pa | Punjabi | Gurmukhi | Script analysis |
+| 11 | gu | Gujarati | Gujarati | Script analysis |
+| 12 | or | Odia | Odia | Script analysis |
+| 13 | ta | Tamil | Tamil | Script analysis |
+| 14 | te | Telugu | Telugu | Script analysis |
+| 15 | kn | Kannada | Kannada | Script analysis |
+| 16 | ml | Malayalam | Malayalam | Script analysis |
+| 17 | si | Sinhala | Sinhala | Script analysis |
+| 18 | th | Thai | Thai | Script analysis |
+| 19 | lo | Lao | Lao | Script analysis |
+| 20 | my | Burmese | Burmese | Script analysis |
+| 21 | am | Amharic | Ge'ez (Ethiopic) | Script analysis |
+
+**How to check support at runtime:**
+
+```python
+from clang_ldl import supported_language_count, language_coverage_summary
+
+print(supported_language_count())  # 21
+print(language_coverage_summary())
+```
+
+```bash
+python examples/list_languages.py
+python examples/list_languages.py --json
+python examples/list_languages.py --code hi
+```
+
+**Important distinction**
+
+- **Script identification (all 21):** Once text is available as Unicode — from OCR, user input, or another engine — clang-ldl maps characters to languages.
+- **Image OCR (English only today):** The C++ template matcher reads Latin glyphs from images. Other scripts need Phase 1.14 template packs or Phase 2 ML models.
+
 
 ## API Sketch
 
 ### Python
 
 ```python
-from clang_ldl import ImageLanguageDetector
+from clang_ldl import ImageLanguageDetector, supported_language_count
+
+print(supported_language_count())  # 21
 
 detector = ImageLanguageDetector()
 result = detector.detect_from_file("sign.png")
 print(result.text)        # recognized Unicode string
 print(result.languages)   # [{"code": "en", "name": "English", "percent": 100, ...}]
+
+# Unicode text path (works for all 21 scripts)
+result = detector.detect_from_text("Привет हिन्दी")
 ```
 
 ### C
@@ -194,10 +250,11 @@ if (clang_ldl_extract_text("image.png", &result) == CLANG_LDL_OK) {
 
 ## Limitations (Phase 1)
 
-- Best results on **high-contrast, horizontal, printed Latin** text.
-- Handwriting, heavy noise, rotation, and decorative fonts reduce accuracy.
-- Non-Latin scripts require Phase 1.14 template packs or Phase 2 models.
-- Language detection is **script-based** (e.g. Cyrillic → Russian), not semantic.
+- Best **image OCR** results on high-contrast, horizontal, printed **Latin** text.
+- All **21 languages** are supported for **script-based identification** when Unicode text is available.
+- Handwriting, heavy noise, rotation, and decorative fonts reduce OCR accuracy.
+- Non-Latin **image** recognition requires Phase 1.14 template packs or Phase 2 models.
+- Language detection is **script-based** (e.g. Cyrillic → Russian, Devanagari → Hindi), not semantic disambiguation across languages that share a script.
 
 ---
 
