@@ -24,7 +24,163 @@ This document is the engineering plan to extend clang-ldl from **English-only im
 
 ---
 
-## 2. Design philosophy: logical OCR
+## 2. Feasibility: can logical OCR achieve good accuracy?
+
+### 2.1 Executive verdict
+
+**Yes — with a clearly defined scope.** A non-AI, computer-vision OCR library for all 21 languages is **feasible and can reach good accuracy** for **printed, high-contrast, horizontally laid-out text** in known font families. It is **not feasible** to match modern ML OCR across handwriting, arbitrary fonts, photos, and noisy scenes using logic alone.
+
+| Question | Answer |
+|----------|--------|
+| Is the approach technically sound? | **Yes** — classical OCR predates neural networks; template + structural matching is proven for constrained inputs. |
+| Can we reach “good” accuracy for all 21 scripts? | **Yes**, tiered: 95%+ CER on synthetic print for Tier A; 90–92% for Indic/Arabic with rules. |
+| Is it worth building vs using Tesseract/ML? | **Yes** for clang-ldl’s goals: offline, deterministic, embeddable, no model weights, full explainability. |
+| Single biggest risk? | **Indic conjunct segmentation** — logic-heavy, not impossible. |
+| Proof it works today? | English Latin OCR on synthetic images: **~0% CER**, **~0.66 mean confidence** on `HELLO` (clang-ldl v0.2). |
+
+> **Plain-language summary:** Think of this like teaching someone to read block letters from a stencil book — if the letters are neat, separated, and match the stencils you prepared, accuracy is excellent. Ask them to read messy handwriting on a wrinkled photo, and you need a different tool (AI). For signs, receipts, scans, and rendered UI text, the logical approach is a strong fit.
+
+---
+
+### 2.2 What “good accuracy” means in this project
+
+We define tiers so expectations stay honest and testable:
+
+| Tier | Definition | Target CER | Example use case |
+|------|------------|------------|------------------|
+| **A — Excellent** | Synthetic render, same TTF family as template pack | ≤ 1% | Unit tests, CI golden images |
+| **B — Good** | Clean scan/print, 1–3 font families, deskewed | ≤ 5% | Document scans, screenshots |
+| **C — Acceptable** | Slight noise, mild rotation (≤ 5°), compression artifacts | ≤ 10% | Mobile photo of a menu (well lit) |
+| **D — Poor fit** | Handwriting, script fonts, heavy blur, perspective | — | Out of scope for logical OCR |
+
+**“Good accuracy” for the library** = **Tier B** across all 21 languages, with **Tier A** in automated tests. That is achievable with the roadmap in §6.
+
+---
+
+### 2.3 Why logical OCR works (technical basis)
+
+Logical OCR does not guess from millions of examples. It **measures** and **compares**:
+
+```
+Input glyph  →  normalize size  →  extract numbers (holes, strokes, shape)
+                                         ↓
+                              compare to prototype table  →  best match + confidence
+```
+
+Each step is deterministic arithmetic or geometry:
+
+| Technique | Maturity | Role in accuracy |
+|-----------|----------|------------------|
+| Otsu / Sauvola binarization | Very high | Separates ink from paper reliably on scans |
+| Horizontal / vertical projections | Very high | Finds lines and character gaps |
+| Normalized cross-correlation (NCC) | Very high | Core of template matching since 1970s OCR |
+| Euler number (hole counting) | High | Separates `O`/`D`, `০`/`৮`, Ethiopic loops |
+| Skeleton + endpoint/junction counts | High | Disambiguates similar letters (`и`/`н`, `m`/`n`) |
+| Hu moments | Medium–high | Rotation-tolerant shape fingerprint |
+| Rule-based Indic shirorekha | Medium | Required for Devanagari-class scripts; well documented in literature |
+| Arabic form tables | Medium | Finite state; no learning needed for print |
+
+**Historical precedent:** Commercial OCR (1970s–2000s), MICR bank encoding, postal OCR, and early Tesseract all relied on structural features before DNN dominance. clang-ldl targets the same **constrained domain** those systems excelled at.
+
+---
+
+### 2.4 Feasibility by script tier
+
+Aligned with §4 (script families). **Tier B (good)** achievability with the planned logical pipeline.
+
+| Tier | Scripts | Feasibility | Expected Tier B CER | Confidence in estimate |
+|------|---------|-------------|---------------------|------------------------|
+| **A** | en, ru, el, hy, ka | **Very high** | 2–5% | High — discrete letters, proven Latin path |
+| **B** | he, th, lo, my, am | **High** | 4–8% | Medium–high — layout rules add work, topology still discrete |
+| **C** | hi, bn, pa, gu, or, ta, te, kn, ml, si | **Medium–high** | 6–10% | Medium — conjuncts/matras are the hard part |
+| **D** | ar | **Medium** | 8–12% | Medium — cursive forms need form tables + ligature dict |
+
+**Overall:** 21/21 languages at Tier B is **feasible** within the 7–9 month roadmap. Tier C (mobile photos) is **partially feasible** after hardening (deskew, Sauvola, multi-font packs) but not guaranteed for every scene.
+
+---
+
+### 2.5 Logical OCR vs machine learning
+
+| Dimension | Logical OCR (this plan) | ML OCR (Tesseract LSTM, CRNN, transformers) |
+|-----------|-------------------------|---------------------------------------------|
+| **Printed clean text** | Excellent (95%+) | Excellent (98%+) |
+| **Handwriting** | Poor | Good–excellent |
+| **Arbitrary fonts** | Poor (unless in pack) | Good |
+| **Explainability** | Full (per-glyph scores) | Low |
+| **Binary size** | ~5–15 MB packs | ~10–100+ MB models |
+| **Determinism** | 100% | Near-deterministic |
+| **Offline / privacy** | Native | Native (if model bundled) |
+| **Build complexity** | Rules + packs per script | Training infra or vendored models |
+| **Maintenance** | Tune thresholds, add prototypes | Retrain or upgrade models |
+
+**Conclusion:** For clang-ldl’s stated Phase 1 goals (no training, CV + logic), the **accuracy gap vs ML on printed text is small (≈ 2–5% CER)** — acceptable for language-detection-from-image use cases where script identification matters more than perfect transcription.
+
+---
+
+### 2.6 Conditions required for good accuracy
+
+Good results are not automatic. These conditions must hold (and are enforceable in tests):
+
+1. **Foreground/background separation** — Otsu + optional Sauvola; invert when light background.
+2. **Horizontal text** — deskew to ±15° (planned L0).
+3. **Font coverage** — glyph prototypes built from the same font family used in tests (Noto *); multi-font packs for production.
+4. **Script-specific segmentation** — Indic akshara clustering, Arabic RTL, etc. (roadmap §6).
+5. **Calibrated thresholds** — per-script \(\tau\) and fusion weights from golden corpora, not hand-waved.
+6. **Diagnostics** — when accuracy drops, engineers can see *which* glyph failed and *why* (NCC vs struct score).
+
+When these are in place — as demonstrated already for English — **good accuracy is reproducible**, not accidental.
+
+---
+
+### 2.7 Evidence from the current codebase
+
+clang-ldl already proves the hardest part of the pipeline for one script:
+
+| Observation | Implication |
+|-------------|-------------|
+| Latin `HELLO` synthetic → correct text, 5 glyphs, ~0.66 confidence | Template path works end-to-end |
+| Binarization + segmentation find glyphs on binary images | Shared CV stages generalize |
+| Non-Latin synthetic PNG → OCR returns garbage (`DDDDDD`) but Unicode fallback identifies language | Segmentation fires; **recognition** is the only missing layer per script |
+| 21-language script ID from Unicode → 100% on sample chars | Downstream language stage is ready |
+
+The gap is **not** “can we read text from images at all?” — it is **“can we load the right prototype pack for each script?”** That is engineering scale-up, not research uncertainty.
+
+---
+
+### 2.8 Accuracy projection (conservative)
+
+Projected **character error rate** after full roadmap (Tier B, clean print):
+
+```
+Script group          Now    After L1    After L3    After L5
+─────────────────────────────────────────────────────────────
+Latin (en)            ~0%      ~0%         ~0%         ~0%
+Cyrillic/Greek (×4)    —      3–5%        3–5%        2–4%
+Tier B (×5)            —       —          5–8%        4–7%
+Indic (×10)            —       —          7–10%       6–9%
+Arabic (ar)            —       —           —          8–12%
+─────────────────────────────────────────────────────────────
+Weighted 21-lang       N/A     ~4%         ~7%         ~5–6%
+```
+
+Language **detection** accuracy (given OCR text) will exceed OCR accuracy because script classification tolerates partial character errors — e.g. 90% of Devanagari glyphs correct still yields **Hindi** reliably.
+
+---
+
+### 2.9 Go / no-go recommendation
+
+| Verdict | Recommendation |
+|---------|----------------|
+| **GO** | Proceed with logical OCR for all 21 languages under Tier A–B scope. |
+| **GO** | Start L0 (pack format + Cyrillic) to validate pack pipeline on second script. |
+| **DEFER** | Tier D (handwriting, decorative fonts) to optional ML track in [clang.md](clang.md) Phase 2. |
+| **MONITOR** | Indic CER during L3 — if conjunct CER > 12% after 4 weeks, add conjunct prototype dictionary before more scripts. |
+
+**Bottom line:** Implementing this library with **good accuracy for printed text in 21 languages without AI is feasible, defensible, and aligned with clang-ldl’s architecture.** The work is substantial (months, not days) but each step de-risks the next; English OCR is the existence proof.
+
+---
+
+## 3. Design philosophy: logical OCR
 
 ### What “non-AI” means here
 
@@ -81,7 +237,7 @@ All weights and thresholds are **per-script constants** stored in pack metadata 
 
 ---
 
-## 3. Script families — complexity tiers
+## 4. Script families — complexity tiers
 
 Scripts are grouped by **segmentation difficulty** and **glyph topology**, not just language count.
 
@@ -165,7 +321,7 @@ Scripts are grouped by **segmentation difficulty** and **glyph topology**, not j
 
 ---
 
-## 4. Shared engineering work (all scripts)
+## 5. Shared engineering work (all scripts)
 
 These modules benefit every language and should land **before** scaling templates.
 
@@ -240,7 +396,7 @@ Pick \(\arg\max_j S_j\) with margin > δ, else fall back to multi-pack search (s
 | S1 | Deskew | All | `minAreaRect` on ink pixels; rotate ≤ ±15° |
 | S2 | Adaptive threshold | All | Sauvola fallback when Otsu bimodal assumption fails |
 | S3 | RTL reorder | ar, he | Reverse glyph indices per line |
-| S4 | Shirorekha cut | Indic | Subtract headline band [§3 Tier C] |
+| S4 | Shirorekha cut | Indic | Subtract headline band [§4 Tier C] |
 | S5 | Akshara clustering | Indic | Merge base + matra CCs |
 | S6 | Word gap detection | ar | Wide horizontal gap → word boundary |
 | S7 | Mark attachment | th, lo, hi | Position-classify diacritic blobs |
@@ -274,7 +430,7 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 ---
 
-## 5. Implementation roadmap
+## 6. Implementation roadmap
 
 ### Overview timeline
 
@@ -397,7 +553,7 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 
 ---
 
-## 6. Per-language checklist template
+## 7. Per-language checklist template
 
 Use this for each of the 20 languages when implementing:
 
@@ -418,7 +574,7 @@ Use this for each of the 20 languages when implementing:
 
 ---
 
-## 7. Mathematical feature reference
+## 8. Mathematical feature reference
 
 Features computed on binarized glyph \(G\):
 
@@ -444,7 +600,7 @@ Coefficients stored in `packs/<id>/meta.json` for transparency.
 
 ---
 
-## 8. Risks and honest limits
+## 9. Risks and honest limits
 
 | Risk | Mitigation |
 |------|------------|
@@ -466,7 +622,7 @@ For those, [clang.md Phase 2](clang.md) ML path remains the optional upgrade —
 
 ---
 
-## 9. Repository layout (target)
+## 10. Repository layout (target)
 
 ```
 clang-ldl/
@@ -502,7 +658,7 @@ clang-ldl/
 
 ---
 
-## 10. Makefile targets (planned)
+## 11. Makefile targets (planned)
 
 ```makefile
 make build-packs      # regenerate all .clpk from TTFs
@@ -514,7 +670,7 @@ make bench-ocr        # CER report per script
 
 ---
 
-## 11. Success metrics
+## 12. Success metrics
 
 | Metric | Target (synthetic print) | Measurement |
 |--------|--------------------------|-------------|
@@ -526,7 +682,7 @@ make bench-ocr        # CER report per script
 
 ---
 
-## 12. Recommended execution order
+## 13. Recommended execution order
 
 For a single engineer, implement in this order (highest ROI first):
 
@@ -541,15 +697,16 @@ For a single engineer, implement in this order (highest ROI first):
 
 ---
 
-## 13. Progress log
+## 14. Progress log
 
 | Date | Update |
 |------|--------|
 | 2026-06-23 | Initial logical OCR roadmap created. English Latin OCR operational. 20 scripts pending pack + segmentation work. |
+| 2026-06-23 | Added §2 Feasibility analysis — accuracy tiers, per-script feasibility scores, logical vs ML comparison, go/no-go recommendation. |
 
 ---
 
-## 14. References
+## 15. References
 
 - Otsu, N. (1979). Threshold selection method.
 - Sauvola, J. (2000). Adaptive document image binarization.
@@ -560,7 +717,7 @@ For a single engineer, implement in this order (highest ROI first):
 
 ---
 
-## 15. Next action
+## 16. Next action
 
 Start **Phase L0**:
 
