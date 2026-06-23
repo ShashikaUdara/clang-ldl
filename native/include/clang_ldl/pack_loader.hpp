@@ -38,4 +38,10 @@ GlyphPack load_pack_by_id(const std::string& pack_id);
 /** Cached latin pack (loaded once). */
 const GlyphPack& latin_pack();
 
+/** Cached pack by id (latin, cyrillic, greek, armenian, georgian, …). */
+const GlyphPack& pack_by_id(const std::string& pack_id);
+
+/** Tier A pack ids used by script_router. */
+const std::vector<std::string>& tier_a_pack_ids();
+
 } // namespace clang_ldl

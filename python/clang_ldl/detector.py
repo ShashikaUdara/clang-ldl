@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+import os
+from contextlib import contextmanager
 from pathlib import Path
 
 from clang_ldl._native import extract_text_from_file, extract_text_from_image_bytes, native_library
 from clang_ldl.language_analyzer import LanguageAnalyzer
 from clang_ldl.models import DetectionResult
-from clang_ldl.text_utils import has_letter, is_ascii_ocr_text
+from clang_ldl.text_utils import has_letter, ocr_pack_id_for_text, uses_native_ocr
+
+
+@contextmanager
+def _ocr_pack_hint(pack_id: str | None):
+    if not pack_id:
+        yield
+        return
+    key = "CLANG_LDL_PACK_ID"
+    prev = os.environ.get(key)
+    os.environ[key] = pack_id
+    try:
+        yield
+    finally:
+        if prev is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = prev
 
 
 class ImageLanguageDetector:
@@ -21,7 +40,9 @@ class ImageLanguageDetector:
         return raw.decode("utf-8") if raw else "unknown"
 
     def detect_from_file(self, path: str | Path, *, hint_text: str | None = None) -> DetectionResult:
-        extraction = extract_text_from_file(path)
+        pack_id = ocr_pack_id_for_text(hint_text) if hint_text else None
+        with _ocr_pack_hint(pack_id):
+            extraction = extract_text_from_file(path)
         ocr_result = self._to_detection(extraction)
         ocr_result.ocr_text = ocr_result.text
 
@@ -69,17 +90,20 @@ class ImageLanguageDetector:
         """
         Detect language for a rendered synthetic image.
 
-        Latin ASCII uses native OCR end-to-end. Other scripts render to PNG;
-        language is identified from Unicode script analysis (native OCR templates
-        for those scripts are not available in Phase 1).
+        Languages with native OCR packs use the C++ pipeline end-to-end.
+        Others fall back to Unicode script analysis on the hint text.
         """
         text = text.strip()
-        if is_ascii_ocr_text(text):
-            result = self.detect_from_file(image_path)
-            result.identification_source = "ocr"
-            return result
+        pack_id = ocr_pack_id_for_text(text)
+        with _ocr_pack_hint(pack_id):
+            if uses_native_ocr(text):
+                result = self.detect_from_file(image_path, hint_text=text)
+                result.identification_source = "ocr"
+                if not result.text.strip() and has_letter(text):
+                    return self._unicode_fallback(text, result.glyph_count, result.mean_confidence)
+                return result
 
-        extraction = extract_text_from_file(image_path)
+            extraction = extract_text_from_file(image_path)
         ocr = self._to_detection(extraction)
         result = self._unicode_fallback(text, ocr.glyph_count, ocr.mean_confidence)
         result.ocr_text = ocr.text

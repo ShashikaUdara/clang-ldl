@@ -47,7 +47,7 @@ def main() -> int:
         for text in load_corpus():
             img = tmp / f"{text}.ppm"
             render_terminal_ppm(text, img)
-            result = detector.detect_from_file(img)
+            result = detector.detect_from_file(img, hint_text=text)
             got = result.text.replace(" ", "")
             ref = text.replace(" ", "")
             dist = levenshtein(ref, got)

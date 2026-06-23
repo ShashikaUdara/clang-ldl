@@ -8,7 +8,7 @@ namespace clang_ldl {
 
 void recognize_glyphs(std::vector<Glyph>& glyphs, const Image& line_binary) {
     const std::string pack_id = route_script_for_line(line_binary);
-    const GlyphPack& pack = pack_id == "latin" ? latin_pack() : latin_pack();
+    const GlyphPack& pack = pack_by_id(pack_id);
     recognize_glyphs_with_pack(glyphs, pack);
 }
 

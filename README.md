@@ -43,8 +43,9 @@ make example
 |--------|-------------|
 | `make setup` | Build + install + verify (recommended first run) |
 | `make build` | Compile C/C++ shared library + glyph packs |
-| `make build-packs` | Regenerate `packs/latin.clpk` from 5×7 font |
+| `make build-packs` | Regenerate all `.clpk` glyph packs (Latin + Tier A) |
 | `make test-ocr-en` | English OCR golden corpus (0% CER target) |
+| `make test-ocr-tier-a` | Russian, Greek, Armenian, Georgian OCR corpora |
 | `make verify` | Build, languages, smoke + OCR tests |
 | `make clean` | Remove build artifacts and caches |
 | `make install-dev` | Editable Python install with pytest |
@@ -68,17 +69,21 @@ Legacy script (still works): `./scripts/build_native.sh`
 
 - `CLANG_LDL_LIB` — optional path to `libclang_ldl.so` if not in `native/build/`
 - `CLANG_LDL_PACKS_DIR` — directory containing `.clpk` glyph packs (default: `packs/`)
+- `CLANG_LDL_PACK_ID` — force OCR pack (`latin`, `cyrillic`, `greek`, `armenian`, `georgian`)
 - `CLANG_LDL_DESKEW=1` — enable experimental deskew in preprocessing (off by default)
 
 ## Phase 1 limitations
 
-- **Image OCR** works best on high-contrast printed **Latin** text (`HELLO`, `ABC`, …).
-- **All 21 languages** are identified via **Unicode script analysis** when you pass text with `--synthetic` (non-Latin) or `--text`.
-- Non-Latin image OCR is planned in [docs/ocr-logical.md](docs/ocr-logical.md) (non-AI template packs + rule-based segmentation).
+- **Image OCR** works on high-contrast synthetic text for **Latin, Cyrillic, Greek, Armenian, and Georgian** (see `make test-ocr-tier-a`).
+- **All 21 languages** are identified via **Unicode script analysis** when native OCR is unavailable.
+- Remaining scripts are planned in [docs/ocr-logical.md](docs/ocr-logical.md) (Phases L2–L5).
 
 ```bash
-# Latin — full native OCR pipeline
+# Latin — terminal font OCR
 python3 examples/detect_language.py --synthetic "HELLO"
+
+# Russian — native Tier A OCR
+python3 examples/detect_language.py --synthetic "москва"
 
 # Sinhala / Hindi / etc. — script analysis (OCR templates pending)
 python3 examples/detect_language.py --synthetic "මෙවලම්"

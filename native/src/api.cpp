@@ -26,6 +26,27 @@ void fill_glyph_info(ClangLdlGlyphInfo& info, const clang_ldl::Glyph& g) {
     std::strncpy(info.pack_id, pid.c_str(), sizeof(info.pack_id) - 1);
 }
 
+void append_utf8(std::string& out, uint32_t codepoint) {
+    if (codepoint == 0) {
+        return;
+    }
+    if (codepoint <= 0x7F) {
+        out.push_back(static_cast<char>(codepoint));
+    } else if (codepoint <= 0x7FF) {
+        out.push_back(static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F)));
+        out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+    } else if (codepoint <= 0xFFFF) {
+        out.push_back(static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F)));
+        out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+    } else if (codepoint <= 0x10FFFF) {
+        out.push_back(static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07)));
+        out.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+    }
+}
+
 int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
     if (!out) {
         return CLANG_LDL_ERR_NULL;
@@ -59,7 +80,7 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
             all_glyphs = std::move(glyphs);
         }
 
-        std::ostringstream text;
+        std::string text;
         float conf_sum = 0.f;
         int conf_n = 0;
         clang_ldl::Glyph* prev = nullptr;
@@ -68,18 +89,18 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
                 const int gap = g.box.x - (prev->box.x + prev->box.w);
                 const int min_w = std::min(prev->box.w, g.box.w);
                 if (gap > std::max(min_w, 4)) {
-                    text << ' ';
+                    text.push_back(' ');
                 }
             }
-            if (g.codepoint >= 32 && g.codepoint < 127) {
-                text << static_cast<char>(g.codepoint);
+            if (g.codepoint != '?' && g.codepoint != 0) {
+                append_utf8(text, static_cast<uint32_t>(g.codepoint));
             }
             conf_sum += g.confidence;
             ++conf_n;
             prev = &g;
         }
 
-        const std::string s = text.str();
+        const std::string& s = text;
         out->text_len = s.size();
         out->text = static_cast<char*>(std::malloc(s.size() + 1));
         if (!out->text) {
@@ -113,7 +134,7 @@ int extract_internal(const clang_ldl::Image& input, ClangLdlResult* out) {
 extern "C" {
 
 const char* clang_ldl_version(void) {
-    return "0.3.0";
+    return "0.4.0";
 }
 
 int clang_ldl_extract_text(const char* image_path, ClangLdlResult* out) {

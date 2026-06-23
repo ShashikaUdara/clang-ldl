@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "python"))
+sys.path.insert(0, str(ROOT / "tools"))
 
 import importlib.util
 
@@ -21,15 +22,66 @@ assert _spec.loader is not None
 _spec.loader.exec_module(_mod)
 FONT5x7 = _mod.FONT5x7
 
-sys.path.insert(0, str(ROOT / "tools"))
+from ocr_render import GRID_H, GRID_W, render_cell_glyph_bitmap, resolve_font  # noqa: E402
 from struct_features import compute_features  # noqa: E402
 
 CLPK_MAGIC = b"CLPK"
 CLPK_VERSION = 1
-
-GRID_W = 20
-GRID_H = 28
 FONT_SCALE = 4
+
+PACK_SPECS: dict[str, dict] = {
+    "latin": {
+        "kind": "bitmap5x7",
+        "threshold": 0.30,
+        "w_ncc": 0.55,
+        "w_struct": 0.25,
+        "w_aspect": 0.20,
+    },
+    "cyrillic": {
+        "kind": "ttf",
+        "font": "NotoSans-Regular.ttf",
+        "codepoints": list(range(0x0410, 0x0430)) + list(range(0x0430, 0x0450)) + [0x0401, 0x0451],
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.15,
+        "w_ncc": 0.85,
+        "w_struct": 0.05,
+        "w_aspect": 0.10,
+    },
+    "greek": {
+        "kind": "ttf",
+        "font": "NotoSans-Regular.ttf",
+        "codepoints": list(range(0x0391, 0x03AA)) + list(range(0x03B1, 0x03CA)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.15,
+        "w_ncc": 0.85,
+        "w_struct": 0.05,
+        "w_aspect": 0.10,
+    },
+    "armenian": {
+        "kind": "ttf",
+        "font": "NotoSansArmenian-Regular.ttf",
+        "codepoints": list(range(0x0531, 0x0557)) + list(range(0x0561, 0x0588)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.15,
+        "w_ncc": 0.85,
+        "w_struct": 0.05,
+        "w_aspect": 0.10,
+    },
+    "georgian": {
+        "kind": "ttf",
+        "font": "NotoSansGeorgian-Regular.ttf",
+        "codepoints": list(range(0x10D0, 0x10F1)),
+        "grid_w": 28,
+        "grid_h": 40,
+        "threshold": 0.15,
+        "w_ncc": 0.85,
+        "w_struct": 0.05,
+        "w_aspect": 0.10,
+    },
+}
 
 
 def render_glyph_bitmap(codepoint: int) -> list[int]:
@@ -67,6 +119,40 @@ def build_latin_pack() -> list[dict]:
             }
         )
     return glyphs
+
+
+def build_ttf_pack(font_name: str, codepoints: list[int], *, grid_w: int, grid_h: int) -> list[dict]:
+    font_path = resolve_font(font_name)
+    glyphs = []
+    seen: set[int] = set()
+    for cp in codepoints:
+        if cp in seen:
+            continue
+        seen.add(cp)
+        bitmap = render_cell_glyph_bitmap(cp, font_path, grid_w=grid_w, grid_h=grid_h)
+        if not any(bitmap):
+            continue
+        feats = compute_features(bitmap, grid_w, grid_h)
+        glyphs.append(
+            {
+                "codepoint": cp,
+                "bitmap": bitmap,
+                "holes": int(feats["holes"]),
+                "endpoints": int(feats["endpoints"]),
+                "junctions": int(feats["junctions"]),
+                "aspect": float(feats["aspect"]),
+            }
+        )
+    return glyphs
+
+
+def build_pack(pack_id: str) -> tuple[list[dict], int, int]:
+    spec = PACK_SPECS[pack_id]
+    grid_w = spec.get("grid_w", GRID_W)
+    grid_h = spec.get("grid_h", GRID_H)
+    if spec["kind"] == "bitmap5x7":
+        return build_latin_pack(), grid_w, grid_h
+    return build_ttf_pack(spec["font"], spec["codepoints"], grid_w=grid_w, grid_h=grid_h), grid_w, grid_h
 
 
 def write_clpk(
@@ -115,21 +201,39 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build clang-ldl .clpk glyph packs")
     parser.add_argument(
         "--pack",
-        choices=["latin"],
+        choices=sorted(PACK_SPECS),
         default="latin",
         help="Pack to build (default: latin)",
     )
     parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Build every Tier A / Latin pack",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
-        default=ROOT / "packs" / "latin.clpk",
-        help="Output .clpk path",
+        default=None,
+        help="Output .clpk path (default: packs/<pack>.clpk)",
     )
     args = parser.parse_args()
 
-    if args.pack == "latin":
-        glyphs = build_latin_pack()
-        write_clpk(args.output, "latin", glyphs)
+    pack_ids = sorted(PACK_SPECS) if args.all else [args.pack]
+    for pack_id in pack_ids:
+        spec = PACK_SPECS[pack_id]
+        glyphs, grid_w, grid_h = build_pack(pack_id)
+        out = args.output if args.output and not args.all else ROOT / "packs" / f"{pack_id}.clpk"
+        write_clpk(
+            out,
+            pack_id,
+            glyphs,
+            grid_w=grid_w,
+            grid_h=grid_h,
+            threshold=spec["threshold"],
+            w_ncc=spec["w_ncc"],
+            w_struct=spec["w_struct"],
+            w_aspect=spec["w_aspect"],
+        )
     return 0
 
 

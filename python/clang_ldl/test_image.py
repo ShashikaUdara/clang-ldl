@@ -179,15 +179,67 @@ def render_unicode_png(text: str, out_path: Path, font_size: int = 48, margin: i
     return out_path
 
 
+# Tier A native OCR — fixed-width line rendering (must match pack_builder fonts).
+OCR_TIER_A_FONTS: dict[str, str] = {
+    "ru": "NotoSans-Regular.ttf",
+    "el": "NotoSans-Regular.ttf",
+    "hy": "NotoSansArmenian-Regular.ttf",
+    "ka": "NotoSansGeorgian-Regular.ttf",
+}
+
+
+def _load_ocr_render():
+    import importlib.util
+
+    tools = Path(__file__).resolve().parent.parent.parent / "tools" / "ocr_render.py"
+    spec = importlib.util.spec_from_file_location("ocr_render", tools)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def render_ocr_corpus_image(text: str, out_path: Path, lang: str) -> Path:
+    """Render synthetic OCR test image for a supported native-OCR language."""
+    if lang == "en":
+        path = out_path if out_path.suffix.lower() == ".ppm" else out_path.with_suffix(".ppm")
+        return render_terminal_ppm(text, path)
+    font_name = OCR_TIER_A_FONTS.get(lang)
+    if not font_name:
+        raise ValueError(f"no OCR corpus renderer for language {lang!r}")
+    ocr_render = _load_ocr_render()
+    font_path = ocr_render.resolve_font(font_name)
+    path = out_path if out_path.suffix.lower() == ".png" else out_path.with_suffix(".png")
+    return ocr_render.render_ocr_png(text, path, font_path)
+
+
 def render_synthetic_image(text: str, out_path: Path) -> tuple[Path, str]:
     """
     Pick renderer by script. Returns (path, renderer_name).
     Latin ASCII -> PPM terminal font (native OCR).
+    Tier A scripts -> fixed-width PNG (native OCR).
     Other Unicode -> PNG (script analysis fallback).
     """
+    from clang_ldl.text_utils import is_ascii_ocr_text, ocr_pack_id_for_text
+
     suffix = out_path.suffix.lower()
     if is_ascii_ocr_text(text) and suffix in (".ppm", ""):
         path = out_path if suffix == ".ppm" else out_path.with_suffix(".ppm")
         return render_terminal_ppm(text, path), "terminal_ppm"
+
+    pack_lang = None
+    if ocr_pack_id_for_text(text) == "cyrillic":
+        pack_lang = "ru"
+    elif ocr_pack_id_for_text(text) == "greek":
+        pack_lang = "el"
+    elif ocr_pack_id_for_text(text) == "armenian":
+        pack_lang = "hy"
+    elif ocr_pack_id_for_text(text) == "georgian":
+        pack_lang = "ka"
+
+    if pack_lang is not None:
+        path = out_path if suffix in (".png", ".jpg", ".jpeg") else out_path.with_suffix(".png")
+        return render_ocr_corpus_image(text, path, pack_lang), "ocr_png"
+
     path = out_path if suffix in (".png", ".jpg", ".jpeg") else out_path.with_suffix(".png")
     return render_unicode_png(text, path), "unicode_png"

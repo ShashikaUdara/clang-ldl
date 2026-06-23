@@ -25,7 +25,7 @@ VENV_DIR    := $(ROOT)/.venv
 
 .PHONY: help all setup build native native-cmake native-make clean \
         install install-dev develop uninstall \
-        test test-all test-text verify test-ocr-en build-packs \
+        test test-all test-text verify test-ocr-en test-ocr-tier-a build-packs \
         example example-json languages languages-json \
         env print-env check-deps venv
 
@@ -59,9 +59,9 @@ setup: build install verify
 ## build: Build the C/C++ shared library (alias: native)
 build: build-packs native
 
-## build-packs: Generate .clpk glyph template packs
+## build-packs: Generate .clpk glyph template packs (Latin + Tier A)
 build-packs:
-	$(PYTHON) "$(ROOT)/tools/pack_builder.py" --pack latin --output "$(PACKS_DIR)/latin.clpk"
+	$(PYTHON) "$(ROOT)/tools/pack_builder.py" --all
 
 ## native: Compile libclang_ldl.so (CMake if available, else native/Makefile)
 native:
@@ -133,8 +133,15 @@ test-text:
 [print(c + ': ' + a.detect(t)[0].name) for c, t in samples.items()]"
 
 ## verify: Build, list languages, and run tests
-verify: build languages test-smoke test-ocr-en
+verify: build languages test-smoke test-ocr-en test-ocr-tier-a
 	@echo "Verification passed."
+
+## test-ocr-tier-a: Tier A script OCR corpora (target CER <= 5%)
+test-ocr-tier-a: build
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" ru
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" el
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" hy
+	$(PYTHON) "$(ROOT)/scripts/test_ocr_corpus.py" ka
 
 ## test-ocr-en: English OCR golden corpus (target 0% CER)
 test-ocr-en: build

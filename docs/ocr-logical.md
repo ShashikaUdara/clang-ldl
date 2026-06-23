@@ -487,7 +487,12 @@ Enables Python visualization and per-script threshold tuning without guesswork.
 4. Tune \(\tau\) and weights \(w_1, w_2, w_3\)
 5. Set `ocr_native=True` in `language_registry.py`
 
-**Exit criteria:** CER ≤ 5% per language on synthetic corpus; `detect_language.py --synthetic` works without Unicode fallback.
+**Exit criteria:**
+
+- [x] CER ≤ 5% per language on synthetic corpus (`make test-ocr-tier-a`)
+- [x] `detect_language.py --synthetic` uses native OCR for Tier A scripts (pack hint + router)
+
+**Status:** Complete (2026-06-23). Five packs (`latin` + Tier A), `script_router` voting with `CLANG_LDL_PACK_ID` hint, UTF-8 API output (v0.4.0), `tools/ocr_render.py` line-parity pack building.
 
 ---
 
@@ -706,6 +711,7 @@ For a single engineer, implement in this order (highest ROI first):
 | 2026-06-23 | Initial logical OCR roadmap created. English Latin OCR operational. 20 scripts pending pack + segmentation work. |
 | 2026-06-23 | Added §2 Feasibility analysis — accuracy tiers, per-script feasibility scores, logical vs ML comparison, go/no-go recommendation. |
 | 2026-06-23 | **Phase L0 complete.** `.clpk` v1, `pack_builder.py`, `latin.clpk`, pack loader, struct features, script router stub, diagnostics C API (v0.3.0), `make test-ocr-en` at 0% CER. |
+| 2026-06-23 | **Phase L1 complete.** Tier A packs (cyrillic, greek, armenian, georgian), script router voting, UTF-8 OCR (v0.4.0), `make test-ocr-tier-a`, `ocr_native` for ru/el/hy/ka. |
 
 ---
 
@@ -722,10 +728,9 @@ For a single engineer, implement in this order (highest ROI first):
 
 ## 16. Next action
 
-**Phase L1 — Cyrillic (Russian):**
+**Phase L2 — Tier B scripts (Hebrew, Thai, Lao, Myanmar, Ethiopic):**
 
-1. Add Cyrillic codepoints to `pack_builder.py` config
-2. Build `packs/cyrillic.clpk` from Noto Sans Cyrillic
-3. Extend `script_router.cpp` to route Cyrillic blocks
-4. Add `tests/ocr/ru/corpus.txt` and `make test-ocr-ru`
-5. Set `ocr_native=True` for `ru` in `language_registry.py`
+1. Add `hebrew.clpk` + `rtl.cpp` layout rules
+2. Add `thai.clpk` with mark-attachment segmentation
+3. Extend `script_router` for Tier B packs
+4. Add per-language OCR corpora and `make test-ocr-tier-b`

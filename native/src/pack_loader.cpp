@@ -4,7 +4,9 @@
 #include <cstring>
 #include <cstdlib>
 #include <fstream>
+#include <mutex>
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
 namespace clang_ldl {
@@ -102,15 +104,29 @@ GlyphPack load_pack_by_id(const std::string& pack_id) {
 }
 
 const GlyphPack& latin_pack() {
-    static GlyphPack cached = []() {
-        try {
-            return load_pack_by_id("latin");
-        } catch (...) {
-            throw std::runtime_error(
-                "latin.clpk not found — run: python3 tools/pack_builder.py && export CLANG_LDL_PACKS_DIR=packs");
-        }
-    }();
-    return cached;
+    return pack_by_id("latin");
+}
+
+const std::vector<std::string>& tier_a_pack_ids() {
+    static const std::vector<std::string> ids = {
+        "latin", "cyrillic", "greek", "armenian", "georgian"};
+    return ids;
+}
+
+const GlyphPack& pack_by_id(const std::string& pack_id) {
+    static std::mutex mu;
+    static std::unordered_map<std::string, GlyphPack> cache;
+    std::lock_guard<std::mutex> lock(mu);
+    const auto it = cache.find(pack_id);
+    if (it != cache.end()) {
+        return it->second;
+    }
+    try {
+        cache.emplace(pack_id, load_pack_by_id(pack_id));
+    } catch (const std::exception& ex) {
+        throw std::runtime_error(std::string("pack load failed (") + pack_id + "): " + ex.what());
+    }
+    return cache.at(pack_id);
 }
 
 } // namespace clang_ldl

@@ -37,7 +37,16 @@ Image ensure_ink_foreground(Image binary) {
 
 Image preprocess(const Image& input) {
     Image gray = input.channels == 1 ? input : input.to_grayscale();
-    Image blurred = gray.gaussian_blur(1);
+    int extreme = 0;
+    for (uint8_t v : gray.pixels) {
+        if (v < 20 || v > 235) {
+            ++extreme;
+        }
+    }
+    const bool near_binary =
+        !gray.pixels.empty()
+        && static_cast<double>(extreme) / static_cast<double>(gray.pixels.size()) > 0.92;
+    Image blurred = near_binary ? gray : gray.gaussian_blur(1);
     Image deskewed = blurred;
     if (const char* env = std::getenv("CLANG_LDL_DESKEW")) {
         if (env[0] == '1' || env[0] == 'y' || env[0] == 'Y') {
@@ -136,6 +145,27 @@ std::vector<Glyph> segment_glyphs(const Image& line_binary) {
         }
         if (x - x0 >= 2) {
             spans.push_back({x0, x});
+        }
+    }
+
+    if (!spans.empty()) {
+        std::vector<int> widths;
+        widths.reserve(spans.size());
+        for (const auto& span : spans) {
+            widths.push_back(span.x1 - span.x0);
+        }
+        std::sort(widths.begin(), widths.end());
+        const int median_w = widths[widths.size() / 2];
+        const int min_span_w = std::max(6, median_w / 2);
+        std::vector<Span> filtered;
+        filtered.reserve(spans.size());
+        for (const auto& span : spans) {
+            if (span.x1 - span.x0 >= min_span_w) {
+                filtered.push_back(span);
+            }
+        }
+        if (!filtered.empty()) {
+            spans = std::move(filtered);
         }
     }
 

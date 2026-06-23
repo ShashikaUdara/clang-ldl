@@ -65,6 +65,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
             UnicodeRange(0x0500, 0x052F),
         ),
         sample_char="а",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="ar",
@@ -98,6 +99,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
             UnicodeRange(0x1F00, 0x1FFF),
         ),
         sample_char="α",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="hy",
@@ -106,6 +108,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
         regions=("Armenia",),
         unicode_ranges=(UnicodeRange(0x0530, 0x058F),),
         sample_char="ա",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="ka",
@@ -117,6 +120,7 @@ SUPPORTED_LANGUAGES: tuple[SupportedLanguage, ...] = (
             UnicodeRange(0x2D00, 0x2D2F),
         ),
         sample_char="ა",
+        ocr_native=True,
     ),
     SupportedLanguage(
         code="hi",
